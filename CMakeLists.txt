@@ -27,5 +27,5 @@ target_link_libraries(image_demorphing
 
 target_compile_definitions(image_demorphing
     PUBLIC
-        IMAGE_DEMORPHING_TEST_RES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/res/"
+        IMAGE_DEMORPHING_RES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/res/"
 )
