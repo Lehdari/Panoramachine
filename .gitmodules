@@ -1,0 +1,3 @@
+[submodule "ext/ImageDemorphingBenchmark"]
+	path = ext/ImageDemorphingBenchmark
+	url = git@github.com:Lehdari/ImageDemorphingBenchmark.git
