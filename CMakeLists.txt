@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
+# Find libraries
+find_package(OpenMP REQUIRED)
+
+
 add_subdirectory(ext)
 
 
@@ -23,6 +27,7 @@ add_executable(image_demorphing
 target_link_libraries(image_demorphing
     PUBLIC
         img_demorph_bm
+        OpenMP::OpenMP_CXX
 )
 
 target_compile_definitions(image_demorphing
