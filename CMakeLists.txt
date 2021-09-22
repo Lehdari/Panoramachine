@@ -24,6 +24,11 @@ add_executable(image_demorphing
     ${IMAGE_DEMORPHING_SOURCES}
 )
 
+target_include_directories(image_demorphing
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
 target_link_libraries(image_demorphing
     PUBLIC
         img_demorph_bm
