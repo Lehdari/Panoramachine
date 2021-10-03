@@ -8,6 +8,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find libraries
 find_package(OpenMP REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_search_module(FFTW REQUIRED fftw3 IMPORTED_TARGET)
 
 
 add_subdirectory(ext)
@@ -33,6 +35,7 @@ target_link_libraries(image_demorphing
     PUBLIC
         img_demorph_bm
         OpenMP::OpenMP_CXX
+        PkgConfig::FFTW
 )
 
 target_compile_definitions(image_demorphing
