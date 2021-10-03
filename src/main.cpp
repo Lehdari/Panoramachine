@@ -24,7 +24,7 @@ int main(void)
 
     ImageDemorphingBenchmark bm(std::move(image));
 
-    auto corr = createCorrection1(bm.getMorphedImage(), bm.getOriginalImage());
+    auto corr = createCorrection4(bm.getMorphedImage(), bm.getOriginalImage());
 
     auto imageCorrected = correctImage(bm.getMorphedImage(), corr);
 
