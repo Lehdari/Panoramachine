@@ -1,4 +1,4 @@
-file(GLOB SUB_HEADERS "*.hpp")
+file(GLOB SUB_HEADERS "*.hpp" "*.inl")
 
 set(IMAGE_DEMORPHING_HEADERS
     ${IMAGE_DEMORPHING_HEADERS}
