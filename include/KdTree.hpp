@@ -15,7 +15,7 @@
 #include <Eigen/Dense>
 
 
-template <typename T_Point>
+template <typename... Args>
 class KdTree {
 };
 
@@ -27,9 +27,6 @@ public:
 
     void addPoint(const Point& point);
     void build();
-
-    const Point* getNearestNaive(const Point& point);
-    void getKNearestNaive(const Point& point, int k, std::vector<const Point*>& kNearest);
 
     const Point* getNearest(const Point& point);
     void getKNearest(const Point& point, int k, std::vector<const Point*>& kNearest);
@@ -50,7 +47,44 @@ private:
     std::vector<Node>           _nodes;
     std::vector<Node*>          _visitedNodes;
 
-    const Point* getNearestVisitNaive(const Point& point, bool markVisit = false);
+    int buildTree(
+        const typename Vector::iterator& begin,
+        const typename Vector::iterator& end,
+        int d);
+
+    Node* searchNode(Node& node, const Point& point, T_Scalar& dis);
+};
+
+
+template<typename T_Scalar, int K, typename T_Handle>
+class KdTree<Eigen::Matrix<T_Scalar, K, 1>, T_Handle> {
+public:
+    using Point = Eigen::Matrix<T_Scalar, K, 1>;
+    using PointerPair = std::pair<const Point*, T_Handle*>;
+    using Pair = std::pair<Point, T_Handle*>;
+    using Vector = std::vector<Pair, Eigen::aligned_allocator<Point>>;
+
+    void addPoint(const Point& point, T_Handle* handle);
+    void build();
+
+    PointerPair getNearest(const Point& point);
+    void getKNearest(const Point& point, int k, std::vector<PointerPair>& kNearest);
+
+private:
+    struct Node {
+        int         pointId = -1;
+        int         left = -1;
+        int         right = -1;
+        int         dSplit;
+        T_Scalar    pSplit;
+        bool        fullyVisited = false;
+    };
+
+    Vector                      _points;
+    std::vector<unsigned char>  _visited;
+    std::vector<size_t>         _visitedIndices;
+    std::vector<Node>           _nodes;
+    std::vector<Node*>          _visitedNodes;
 
     int buildTree(
         const typename Vector::iterator& begin,
