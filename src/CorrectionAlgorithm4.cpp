@@ -9,22 +9,22 @@
 //
 
 #include "CorrectionAlgorithms.hpp"
-#include <img_demorph_bm/Utils.hpp>
+#include "Utils.hpp"
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 
 
 float getError(const cv::Mat& source, const cv::Mat& target, const cv::Mat& corr, const Vec2f& p)
 {
-    return (sampleMatCubic(target, p) -
-        sampleMatCubic(source, p + sampleMatCubic(corr, p).block<2,1>(0,0))).squaredNorm();
+    return (sampleMatCubic<Vec3f>(target, p) -
+        sampleMatCubic<Vec3f>(source, p + sampleMatCubic<Vec2f>(corr, p).block<2,1>(0,0))).squaredNorm();
 }
 
-Vec3f getGradient(const cv::Mat& source, const cv::Mat& target, const cv::Mat& corr, const Vec2f& p, Vec3f& c)
+Vec2f getGradient(const cv::Mat& source, const cv::Mat& target, const cv::Mat& corr, const Vec2f& p, Vec2f& c)
 {
     constexpr float eps = 1.0e-2f;
 
-    Vec3f g(0.0f, 0.0f, 0.0f);
+    Vec2f g(0.0f, 0.0f);
 
     float e, c0;
 
@@ -52,8 +52,8 @@ cv::Mat createCorrection4(const cv::Mat& source, const cv::Mat& target)
     float gdRate = 512.0f;
     constexpr float gdMomentum = 0.95f;
 
-    cv::Mat corr = source.clone() * 0.0f;
-    cv::Mat grad = source.clone() * 0.0f;
+    cv::Mat corr = cv::Mat(source.rows, source.cols, CV_32FC2);
+    cv::Mat grad = cv::Mat(source.rows, source.cols, CV_32FC2);
     cv::Mat corrImg = source.clone();
     cv::Mat diffImg = cv::abs(corrImg-target);
     cv::Mat sourceBlurred, targetBlurred, diffBlurred;
@@ -71,22 +71,22 @@ cv::Mat createCorrection4(const cv::Mat& source, const cv::Mat& target)
 
         while (gradSum > maxGradSum*0.25 && (gradSumDiff < 0.0 || gradSumDiff > maxGradSum*0.0005)) {
             for (int j = 0; j < sourceBlurred.rows; ++j) {
-                auto *cr = corr.ptr<Vec3f>(j);
-                auto *gr = grad.ptr<Vec3f>(j);
+                auto *cr = corr.ptr<Vec2f>(j);
+                auto *gr = grad.ptr<Vec2f>(j);
                 for (int i = 0; i < sourceBlurred.cols; ++i) {
                     gr[i] += getGradient(sourceBlurred, targetBlurred, corr, Vec2f(i, j), cr[i]);
                 }
             }
 
             for (int j = 0; j < sourceBlurred.rows; ++j) {
-                auto *cr = corr.ptr<Vec3f>(j);
-                auto *gr = grad.ptr<Vec3f>(j);
+                auto *cr = corr.ptr<Vec2f>(j);
+                auto *gr = grad.ptr<Vec2f>(j);
                 for (int i = 0; i < sourceBlurred.cols; ++i) {
                     cr[i] -= gr[i] * gdRate;
                 }
             }
 
-            cv::imshow("grad", grad * -50.0f + 0.5f);
+            show2ChannelImage("grad", grad);
 
             gradSum = cv::sum(cv::abs(grad))[0];
             if (maxGradSum < gradSum) maxGradSum = gradSum;
@@ -100,7 +100,7 @@ cv::Mat createCorrection4(const cv::Mat& source, const cv::Mat& target)
 
             corrImg = correctImage(source, corr);
             diffImg = cv::abs(corrImg - target);
-            cv::imshow("corr", corr * 0.025f + 0.5f);
+            show2ChannelImage("corr", corr);
             cv::imshow("corrected", corrImg);
             cv::imshow("diff", diffImg);
             cv::waitKey(20);
