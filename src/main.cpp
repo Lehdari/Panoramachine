@@ -9,10 +9,8 @@
 //
 
 #include "CorrectionAlgorithms.hpp"
-#include "KdTree.hpp"
-
-#include <img_demorph_bm/ImageDemorphingBenchmark.hpp>
-#include <img_demorph_bm/Utils.hpp>
+#include "DistortImage.hpp"
+#include "Utils.hpp"
 #include <opencv2/highgui.hpp>
 #include <random>
 
@@ -22,22 +20,23 @@ int main(void)
     std::string imageFileName = std::string(IMAGE_DEMORPHING_RES_DIR) + "lenna.exr";
     cv::Mat image = cv::imread(imageFileName, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
 
-    gammaCorrect(image, 1.0f/2.2f);
+    DistortSettings settings{
+        15, 25,
+        Vec2f(image.cols, image.rows),
+        128.0f, 512.0f,
+        M_PI*0.125f,
+        0.85f, 0.9f,
+        Vec2f(64.0f, 64.0f)
+    };
+    auto distortedImage = distortImage(image, settings);
 
-    createCorrection2(image, image);
-/*
-    ImageDemorphingBenchmark bm(std::move(image));
+    cv::imshow("distorted", distortedImage.distorted);
+    show2ChannelImage("backwardMap", distortedImage.backwardMap);
+    show2ChannelImage("forwardMap", distortedImage.forwardMap);
+    cv::waitKey(10);
 
-    auto corr = createCorrection2(bm.getMorphedImage(), bm.getOriginalImage());
+    createCorrection2(distortedImage.distorted, image);
+    cv::waitKey(0);
 
-    auto imageCorrected = correctImage(bm.getMorphedImage(), corr);
-
-    auto corr2 = corr.clone()*0.025f + 0.5f;
-    cv::imshow("corr2", corr2);
-    cv::imshow("imageCorrected", imageCorrected);
-    cv::waitKey();
-
-    printf("Error: %0.5f\n", bm.evaluate(corr));
-*/
     return 0;
 }

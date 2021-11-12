@@ -32,7 +32,6 @@ target_include_directories(image_demorphing
 
 target_link_libraries(image_demorphing
     PUBLIC
-        img_demorph_bm
         OpenMP::OpenMP_CXX
         ${OpenCV_LIBS}
         Eigen3::Eigen
