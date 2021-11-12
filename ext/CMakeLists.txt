@@ -1,1 +1,1 @@
-add_subdirectory(ImageDemorphingBenchmark)
+add_subdirectory(Delaunay)

@@ -1,3 +1,3 @@
-[submodule "ext/ImageDemorphingBenchmark"]
-	path = ext/ImageDemorphingBenchmark
-	url = git@github.com:Lehdari/ImageDemorphingBenchmark.git
+[submodule "ext/Delaunay"]
+	path = ext/Delaunay
+	url = git@github.com:Lehdari/Delaunay.git
