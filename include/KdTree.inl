@@ -145,11 +145,11 @@ void KdTree<Eigen::Matrix<T_Scalar, K, 1>, T_Handle>::build()
 }
 
 template<typename T_Scalar, int K, typename T_Handle>
-typename KdTree<Eigen::Matrix<T_Scalar, K, 1>, T_Handle>::PointerPair
+typename KdTree<Eigen::Matrix<T_Scalar, K, 1>, T_Handle>::Pair
 KdTree<Eigen::Matrix<T_Scalar, K, 1>, T_Handle>::getNearest(const Point& point)
 {
     T_Scalar dis = std::numeric_limits<T_Scalar>::max();
-    return &_points[searchNode(_nodes.at(0), point, dis)->pointId];
+    return _points[searchNode(_nodes.at(0), point, dis)->pointId];
 }
 
 template<typename T_Scalar, int K, typename T_Handle>

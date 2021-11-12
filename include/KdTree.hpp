@@ -62,12 +62,12 @@ public:
     using Point = Eigen::Matrix<T_Scalar, K, 1>;
     using PointerPair = std::pair<const Point*, T_Handle*>;
     using Pair = std::pair<Point, T_Handle*>;
-    using Vector = std::vector<Pair, Eigen::aligned_allocator<Point>>;
+    using Vector = std::vector<Pair, Eigen::aligned_allocator<Pair>>;
 
     void addPoint(const Point& point, T_Handle* handle);
     void build();
 
-    PointerPair getNearest(const Point& point);
+    Pair getNearest(const Point& point);
     void getKNearest(const Point& point, int k, std::vector<PointerPair>& kNearest);
 
 private:
