@@ -112,7 +112,10 @@ public:
     LayerDense(T_Scalar initAmplitude = 1) :
         _input  (InputExtended::Ones()),
         _w      (Weights::Random() * initAmplitude),
-        _wg     (Weights::Zero())
+        _wg     (Weights::Zero()),
+        _wm     (Weights::Zero()),
+        _wv     (Weights::Zero()),
+        _t      (0)
     {
     }
 
@@ -129,20 +132,33 @@ public:
         return _w.template block<T_OutputRows, T_InputRows>(0,0).transpose() * ag;
     }
 
-    inline void applyGradients(T_Scalar learningRate, T_Scalar momentum = 0.0)
+    inline void applyGradients(T_Scalar learningRate = 0.001, T_Scalar momentum = 0.9, T_Scalar momentum2 = 0.999)
     {
-        _w -= _wg*learningRate;
-        _wg *= momentum;
+        const T_Scalar epsilon = 1.0e-8;
+        ++_t;
 
-        if (_w.array().abs().maxCoeff() > 1000.0)
-            _w *= 0.9999;
+        _wm = momentum*_wm + (1.0-momentum)*_wg; // update first moment
+        _wv = momentum*_wv + (1.0-momentum2)*(_wg.array().square().matrix()); // update second moment
+
+        T_Scalar alpha = learningRate * (std::sqrt(1.0 - std::pow(momentum2, (T_Scalar)_t)) /
+            (1.0 - std::pow(momentum, (T_Scalar)_t)));
+
+        //printf("t: %d alpha: %0.15f\n", _t, alpha);
+
+        _w -= alpha * _wm.template cwiseProduct((_wv.cwiseSqrt()+Weights::Ones()*epsilon).cwiseInverse());
+        _wg = Weights::Zero();
+
+        _w *= 0.99999;
     }
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 private:
     InputExtended   _input;
     Weights         _w;
-    Weights         _wg;
+    Weights         _wg; // gradient
+    Weights         _wm; // first moment
+    Weights         _wv; // second moment
+    int             _t; // timestep index
 };
 
 
@@ -164,7 +180,10 @@ public:
     LayerMerge(T_Scalar initAmplitude = 1) :
         _input  (InputModified::Ones()),
         _w      (Weights::Random() * initAmplitude),
-        _wg     (Weights::Zero())
+        _wg     (Weights::Zero()),
+        _wm     (Weights::Zero()),
+        _wv     (Weights::Zero()),
+        _t      (0)
     {
     }
 
@@ -190,20 +209,31 @@ public:
         return ig;
     }
 
-    inline void applyGradients(T_Scalar learningRate, T_Scalar momentum = 0.0)
+    inline void applyGradients(T_Scalar learningRate = 0.001, T_Scalar momentum = 0.9, T_Scalar momentum2 = 0.999)
     {
-        _w -= _wg*learningRate;
-        _wg *= momentum;
+        const T_Scalar epsilon = 1.0e-8;
+        ++_t;
 
-        if (_w.array().abs().maxCoeff() > 1000.0)
-            _w *= 0.9999;
+        _wm = momentum*_wm + (1.0-momentum)*_wg; // update first moment
+        _wv = momentum*_wv + (1.0-momentum2)*(_wg.array().square().matrix()); // update second moment
+
+        T_Scalar alpha = learningRate * (std::sqrt(1.0 - std::pow(momentum2, (T_Scalar)_t)) /
+            (1.0 - std::pow(momentum, (T_Scalar)_t)));
+
+        _w -= alpha * _wm.template cwiseProduct((_wv.cwiseSqrt()+Weights::Ones()*epsilon).cwiseInverse());
+        _wg = Weights::Zero();
+
+        _w *= 0.99999;
     }
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 private:
     InputModified   _input;
     Weights         _w;
-    Weights         _wg;
+    Weights         _wg; // gradient
+    Weights         _wm; // first moment
+    Weights         _wv; // second moment
+    int             _t; // timestep index
 };
 
 
