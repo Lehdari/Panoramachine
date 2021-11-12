@@ -35,6 +35,7 @@ target_link_libraries(image_demorphing
         OpenMP::OpenMP_CXX
         ${OpenCV_LIBS}
         Eigen3::Eigen
+        delaunay
 )
 
 target_compile_definitions(image_demorphing
