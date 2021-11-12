@@ -9,7 +9,7 @@
 //
 
 #include "CorrectionAlgorithms.hpp"
-#include <img_demorph_bm/Utils.hpp>
+#include "Utils.hpp"
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <random>
@@ -65,7 +65,7 @@ struct Feature {
         for (int j=0; j<Feature::fsa; ++j) {
             for (int i=0; i<Feature::fsr; ++i) {
                 float angle = 2.0f*M_PI*(i/(float)Feature::fsr);
-                polar.block<3,1>(j*3,i) = sampleMatCubic(img, Vec2f(x+r*std::cos(angle), y+r*std::sin(angle)));
+                polar.block<3,1>(j*3,i) = sampleMatCubic<Vec3f>(img, Vec2f(x+r*std::cos(angle), y+r*std::sin(angle)));
             }
             r *= Feature::frm;
         }
@@ -102,19 +102,18 @@ struct Feature {
         layer10.backpropagate(g))))))))));
     }
 
-    static constexpr float gdMomentum = 0.9f;
-    static void applyGradients(float gdRate, float momentum)
+    static void applyGradients(float gdRate, float momentum = 0.9f, float momentum2 = 0.999f)
     {
-        layer1.applyGradients(gdRate, momentum);
-        layer2.applyGradients(gdRate, momentum);
-        layer3.applyGradients(gdRate, momentum);
-        layer4.applyGradients(gdRate, momentum);
-        layer5.applyGradients(gdRate, momentum);
-        layer6.applyGradients(gdRate, momentum);
-        layer7.applyGradients(gdRate, momentum);
-        layer8.applyGradients(gdRate, momentum);
-        layer9.applyGradients(gdRate, momentum);
-        layer10.applyGradients(gdRate, momentum);
+        layer1.applyGradients(gdRate, momentum, momentum2);
+        layer2.applyGradients(gdRate, momentum, momentum2);
+        layer3.applyGradients(gdRate, momentum, momentum2);
+        layer4.applyGradients(gdRate, momentum, momentum2);
+        layer5.applyGradients(gdRate, momentum, momentum2);
+        layer6.applyGradients(gdRate, momentum, momentum2);
+        layer7.applyGradients(gdRate, momentum, momentum2);
+        layer8.applyGradients(gdRate, momentum, momentum2);
+        layer9.applyGradients(gdRate, momentum, momentum2);
+        layer10.applyGradients(gdRate, momentum, momentum2);
     }
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -129,7 +128,7 @@ Feature::Layer6 Feature::layer6(1.0);
 Feature::Layer7 Feature::layer7(1.0);
 Feature::Layer8 Feature::layer8(1.0);
 Feature::Layer9 Feature::layer9(1.0);
-Feature::Layer10 Feature::layer10(0.1);
+Feature::Layer10 Feature::layer10(1.0);
 
 
 cv::Point cvTransform(const cv::Mat& image, const Vec2f& p)
@@ -247,14 +246,14 @@ void sampleFeatures(const cv::Mat& source, int nFeatureClusters,
 
 cv::Mat createCorrection2(const cv::Mat& source, const cv::Mat& target)
 {
-    constexpr int nFeatureClusters = 8;
+    constexpr int nFeatureClusters = 4;
     AlignedVector<Feature> features;
     AlignedVector<Cluster> featureClusters;
 
     cv::Mat corr = source.clone() * 0.0f;
     cv::Mat projectedFeatures = source.clone() * 0.0f;
 
-    for (int o=0; o<1000000; ++o) {
+    for (int o=0; o<10000000; ++o) {
         printf("o: %d\n", o);
         projectedFeatures *= 0.0f;
 
@@ -263,17 +262,8 @@ cv::Mat createCorrection2(const cv::Mat& source, const cv::Mat& target)
 
         auto t1 = std::chrono::high_resolution_clock::now();
 
-        //#pragma omp parallel for
         for (auto& feature: features) {
             feature.update();
-#if 0
-            int px = (source.cols / 2)*(1.0f + feature.projected(0));
-            int py = (source.rows / 2)*(1.0f + feature.projected(1));
-            if (px < 0 || px >= source.cols || py < 0 || py >= source.rows)
-                continue;
-
-            projectedFeatures.at<Vec3f>(py, px) += Vec3f(0.25f, 0.25f, 0.25f);
-#endif
         }
 
         auto t2 = std::chrono::high_resolution_clock::now();
@@ -289,57 +279,65 @@ cv::Mat createCorrection2(const cv::Mat& source, const cv::Mat& target)
         cv::circle(projectedFeatures, cvTransform(projectedFeatures, globalCentroid),
             4.0, cv::Scalar(0.0, 0.0, 1.0), 1.0);
 
-        KdTree<Vec2f, Cluster> tree;
         for (auto& cluster : featureClusters) {
             cluster.updateCentroid();
-            tree.addPoint(cluster.centroid, &cluster);
         }
-        tree.build();
 
         auto t4 = std::chrono::high_resolution_clock::now();
 
         std::vector<std::pair<const Vec2f*, Cluster*>> nearest;
         double error = 0.0;
         for (auto& cluster : featureClusters) {
-            tree.getKNearest(cluster.centroid, 2, nearest);
+            constexpr float margin = 0.75f;
+            for (auto* f : cluster.features) {
+                f->dir << 0.0f, 0.0f;
 
-            auto* otherCluster = nearest[1].second;
+                for (auto& cluster2 : featureClusters) {
+                    if (&cluster == &cluster2)
+                        continue;
+                    Vec2f cd = cluster2.centroid - f->projected;
+                    float cdl = cd.norm();
+                    if (cdl > 0.0f && cdl < margin)
+                        f->dir += (cd/cdl);
+                }
 
-            Vec2f t(cluster.centroid - globalCentroid);
+                for (auto* f2 : cluster.features) {
+                    if (f == f2)
+                        continue;
+                    f->dir -= (f2->projected - f->projected).normalized();
+                }
 
-            constexpr float targetLowPass = 0.999f;
-            if ((cluster.centroid-otherCluster->centroid).squaredNorm() < 0.9f) {
-                t = otherCluster->centroid + (cluster.centroid-otherCluster->centroid).normalized() * 0.81f - globalCentroid;
-                cluster.target = targetLowPass * cluster.target + (1.0f - targetLowPass) * t;
-                cluster.target = otherCluster->centroid + (cluster.target-otherCluster->centroid).normalized() * 0.81f;
-            }
-            else {
-                cluster.target = targetLowPass * cluster.target + (1.0f - targetLowPass) * t;
-            }
+                // normalize direction towards unit circle
+                float projLen = f->projected.norm()+1.0e-8f;
+                Vec2f normProj = f->projected/projLen;
+                Vec2f dirRadial = (f->dir.dot(normProj))*normProj;
+                Vec2f dirAxial = f->dir-dirRadial;
+                f->dir = dirAxial + (1.0f-projLen)*dirRadial;
 
-            for (auto* feature : cluster.features) {
-                feature->dir = feature->projected - cluster.target;
-                error += (feature->projected - cluster.target).squaredNorm();
+                printf("[ %10.5f, %10.5f, %10.5f, %10.5f ]\n",
+                    f->projected(0), f->projected(1), f->dir(0), f->dir(1));
 
-                cv::line(projectedFeatures, cvTransform(projectedFeatures, feature->projected),
-                    cvTransform(projectedFeatures, cluster.target), cv::Scalar(0.25, 0.25, 0.25));
-
-                //feature.dir += (globalCentroid - feature.projected).normalized()*10.0f;
-                //feature.dir += feature.projected - feature.projected.normalized()*0.5f;
+                cv::line(projectedFeatures, cvTransform(projectedFeatures, f->projected),
+                    cvTransform(projectedFeatures, f->projected - f->dir*0.1), cv::Scalar(0.35, 0.35, 0.0));
+                cv::line(projectedFeatures, cvTransform(projectedFeatures, f->projected),
+                    cvTransform(projectedFeatures, cluster.centroid), cv::Scalar(0.15, 0.0, 0.2));
+                cv::circle(projectedFeatures, cvTransform(projectedFeatures, f->projected),
+                    3.0, cv::Scalar(0.35, 0.35, 0.0), 1.0);
             }
 
             cv::circle(projectedFeatures, cvTransform(projectedFeatures, cluster.centroid),
-                3.0, cv::Scalar(0.0, 1.0, 0.0), 1.0);
-
+                3.0, cv::Scalar(0.75, 0.0, 1.0), 1.0);
+#if 0
             cv::circle(projectedFeatures, cvTransform(projectedFeatures, cluster.target),
                 3.0, cv::Scalar(1.0, 0.0, 0.0), 1.0);
+#endif
         }
         printf("error: %0.10f\n", error);
 
         auto t5 = std::chrono::high_resolution_clock::now();
 
         // Gradient descent
-        constexpr double gdRate = 1.0e-7;
+        constexpr double gdRate = 1.0e-6;
 
         //#pragma omp parallel for
         for (auto& feature: features) {
@@ -347,7 +345,7 @@ cv::Mat createCorrection2(const cv::Mat& source, const cv::Mat& target)
             feature.computeGradients(feature.dir);
         }
 
-        Feature::applyGradients(gdRate, 0.0f);
+        Feature::applyGradients(gdRate);
 
         auto t6 = std::chrono::high_resolution_clock::now();
 
