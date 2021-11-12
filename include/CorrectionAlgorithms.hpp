@@ -15,9 +15,7 @@
 #include <opencv2/core/mat.hpp>
 
 
-cv::Mat createCorrection1(const cv::Mat& source, const cv::Mat& target);
 cv::Mat createCorrection2(const cv::Mat& source, const cv::Mat& target);
-cv::Mat createCorrection3(const cv::Mat& source, const cv::Mat& target);
 cv::Mat createCorrection4(const cv::Mat& source, const cv::Mat& target);
 
 
