@@ -224,8 +224,14 @@ void sampleFeatures(const cv::Mat& source, int nFeatureClusters,
         featureClusters.back().features.push_back(&features.back());
     }
 
+    int fId = 0;
     for (auto& f : features) {
         f.update();
+        std::stringstream fWindowName;
+        fWindowName << "feature" << fId++;
+        cv::Mat featureImg(Feature::fsr, Feature::fsa, CV_32FC3);
+        featureImg.data = reinterpret_cast<unsigned char*>(f.polar.data());
+        cv::imshow(fWindowName.str(), featureImg);
     }
     for (auto& fc : featureClusters) {
         fc.updateCentroid();
