@@ -11,7 +11,10 @@
 #include "DistortImage.hpp"
 #include "MorphTransform.hpp"
 #include "Utils.hpp"
+#include "KdTree.hpp"
 #include <random>
+#include <Eigen/Dense>
+#include <opencv2/highgui.hpp>
 
 
 DistortedImage distortImage(const cv::Mat& image, const DistortSettings& settings)
@@ -20,10 +23,10 @@ DistortedImage distortImage(const cv::Mat& image, const DistortSettings& setting
 
     DistortedImage distortedImage;
 
-    std::vector<MorphTransform> transforms;
+    std::vector<MorphTransform<double>> transforms;
     int nTransforms = settings.nMinTransforms + rnd()%(settings.nMaxTransforms-settings.nMinTransforms+1);
     for (int i=0; i<nTransforms; ++i) {
-        transforms.emplace_back(MorphTransform::randomTransform(
+        transforms.emplace_back(MorphTransform<double>::randomTransform(
             settings.maxPosition,
             settings.minDistance,
             settings.maxDistance,
@@ -38,21 +41,60 @@ DistortedImage distortImage(const cv::Mat& image, const DistortSettings& setting
     distortedImage.backwardMap = cv::Mat(image.rows, image.cols, CV_32FC2);
     distortedImage.forwardMap = cv::Mat(image.rows, image.cols, CV_32FC2);
 
+    std::vector<Vec2d, Eigen::aligned_allocator<Vec2d>> forwardTargetVectors;
+    forwardTargetVectors.reserve(image.cols*image.rows);
+    KdTree<Vec2d, Vec2d> forwardPoints;
+
     for (int j=0; j<distortedImage.distorted.rows; ++j) {
         auto* rDistorted = distortedImage.distorted.ptr<Vec3f>(j);
         auto* rBackward = distortedImage.backwardMap.ptr<Vec2f>(j);
-        //auto* rForward = distortedImage.backwardMap.ptr<Vec2f>(j);
+        //auto* rForward = distortedImage.forwardMap.ptr<Vec2f>(j);
         for (int i=0; i<distortedImage.distorted.cols; ++i) {
-            Vec2f p(i+0.5f, j+0.5f);
+            Vec2d pTarget(i+0.5f, j+0.5f);
 
-            Vec2f p2 = p;
+            Vec2d pSource = pTarget;
             for (auto& t : transforms)
-                p2 = t * p2;
+                pSource = t * pSource;
 
-            rDistorted[i] = sampleMatCubic<Vec3f>(image, p2);
-            rBackward[i] << p2-p;
+            rDistorted[i] = sampleMatCubic<Vec3f>(image, pSource.cast<float>());
+            rBackward[i] << (pSource-pTarget).cast<float>();
+
+            forwardTargetVectors.push_back(pTarget-pSource);
+            forwardPoints.addPoint(pSource, &forwardTargetVectors.back());
         }
     }
+
+    forwardPoints.build();
+
+    for (int j=0; j<distortedImage.forwardMap.rows; ++j) {
+        auto* rForward = distortedImage.forwardMap.ptr<Vec2f>(j);
+        for (int i=0; i<distortedImage.forwardMap.cols; ++i) {
+            Vec2d p(i+0.5f, j+0.5f);
+            rForward[i] = forwardPoints.getNearest(p).second->cast<float>();
+        }
+    }
+
+    cv::Mat backMapped = image.clone();
+    cv::Mat forwardMapped = image.clone();
+
+    for (int j=0; j<image.rows; ++j) {
+        auto* rBackward = distortedImage.backwardMap.ptr<Vec2f>(j);
+        auto* rForward = distortedImage.forwardMap.ptr<Vec2f>(j);
+        auto* rImage = image.ptr<Vec3f>(j);
+        auto* rDistorted = distortedImage.distorted.ptr<Vec3f>(j);
+        for (int i=0; i<image.cols; ++i) {
+            Vec2f p(i+0.5f, j+0.5f);
+            Vec2i vb = (p+rBackward[i]).cast<int>();
+            Vec2i vf = (p+rForward[i]).cast<int>();
+            backMapped.at<Vec3f>(std::clamp(vb(1), 0, image.rows-1), std::clamp(vb(0), 0, image.cols-1)) =
+                rDistorted[i];
+            forwardMapped.at<Vec3f>(std::clamp(vf(1), 0, image.rows-1), std::clamp(vf(0), 0, image.cols-1)) =
+                rImage[i];
+        }
+    }
+
+    cv::imshow("backMapped", backMapped);
+    cv::imshow("forwardMapped", forwardMapped);
 
     return distortedImage;
 }

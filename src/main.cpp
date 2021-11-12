@@ -22,11 +22,11 @@ int main(void)
 
     DistortSettings settings{
         15, 25,
-        Vec2f(image.cols, image.rows),
-        128.0f, 512.0f,
-        M_PI*0.125f,
-        0.85f, 0.9f,
-        Vec2f(64.0f, 64.0f)
+        Vec2d(image.cols, image.rows),
+        128.0, 512.0,
+        M_PI*0.125,
+        0.85, 0.9,
+        Vec2d(64.0, 64.0)
     };
     auto distortedImage = distortImage(image, settings);
 

@@ -21,13 +21,13 @@ struct DistortSettings {
     int nMinTransforms;
     int nMaxTransforms;
 
-    Vec2f maxPosition;
-    float minDistance;
-    float maxDistance;
-    float maxRotation;
-    float minScale;
-    float maxScale;
-    Vec2f maxTranslation;
+    Vec2d   maxPosition;
+    double  minDistance;
+    double  maxDistance;
+    double  maxRotation;
+    double  minScale;
+    double  maxScale;
+    Vec2d   maxTranslation;
 };
 
 struct DistortedImage {
