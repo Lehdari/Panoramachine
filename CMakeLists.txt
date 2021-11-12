@@ -8,6 +8,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find libraries
 find_package(OpenMP REQUIRED)
+find_package(OpenCV REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 add_subdirectory(ext)
 
@@ -32,6 +34,8 @@ target_link_libraries(image_demorphing
     PUBLIC
         img_demorph_bm
         OpenMP::OpenMP_CXX
+        ${OpenCV_LIBS}
+        Eigen3::Eigen
 )
 
 target_compile_definitions(image_demorphing
