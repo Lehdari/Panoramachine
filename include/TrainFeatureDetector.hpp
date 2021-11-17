@@ -33,13 +33,19 @@ private:
     static std::default_random_engine rnd;
 };
 
-
 using TrainingImages = std::vector<TrainingImage>;
-using FeaturePair = std::pair<Feature, Feature>;
-using FeaturePairs = std::vector<FeaturePair>;
 
 
-FeaturePair makeFeaturePair(const TrainingImages& trainingImages, float proximity=0.0f);
+struct TrainingEntry {
+    Feature f1;
+    Feature f2;
+    float   similarity;
+};
+
+using TrainingData = std::vector<TrainingEntry>;
+
+
+TrainingEntry makeTrainingEntry(const TrainingImages& trainingImages, float similarity=0.0f);
 
 void trainFeatureDetector();
 

@@ -47,7 +47,11 @@ TrainingImage::TrainingImage(cv::Mat&& image,
 }
 
 
-FeaturePair makeFeaturePair(const TrainingImages& trainingImages, float proximity)
+inline __attribute__((always_inline)) float entrySimilarityDistance(float similarity) {
+    return similarity > 0.9f ? (1.0f-similarity)*20.0f : 2.0f*std::pow(Feature::frm, (1.0f-similarity)*50.0f);
+}
+
+TrainingEntry makeTrainingEntry(const TrainingImages& trainingImages, float similarity)
 {
     static std::default_random_engine rnd(1507715517);
 
@@ -55,7 +59,7 @@ FeaturePair makeFeaturePair(const TrainingImages& trainingImages, float proximit
     const cv::Mat* img2(nullptr);
     Vec2f p1, p2;
 
-    if (proximity < 1.0e-8f) {
+    if (similarity < 1.0e-8f) {
         // pick two samples from differing images
         int imgId1 = rnd()%trainingImages.size();
         int imgId2 = rnd()%trainingImages.size();
@@ -75,13 +79,16 @@ FeaturePair makeFeaturePair(const TrainingImages& trainingImages, float proximit
         img2 = &trainingImages[imgId1].distorted[imgId2].distorted;
         p1 << RND*img1->cols, RND*img1->rows;
         p2 = p1 + trainingImages[imgId1].distorted[imgId2].forwardMap.at<Vec2f>((int)p1(1), (int)p1(0));
+
+        float angle = 2.0f*M_PI*RND;
+        Vec2f ddir(std::cos(angle), std::sin(angle));
+        p2 += ddir*entrySimilarityDistance(similarity);
     }
 
-    return std::make_pair(Feature(*img1, p1, 1.0f), Feature(*img2, p2, 1.0f));
+    return { Feature(*img1, p1, 2.0f), Feature(*img2, p2, 2.0f), similarity };
 }
 
-
-void trainFeatureDetector()
+TrainingData generateTrainingDataset(int trainingDataSize)
 {
     DistortSettings minSettings{
         10, 15,
@@ -100,18 +107,36 @@ void trainFeatureDetector()
     };
 
     TrainingImages images;
+    images.emplace_back(cv::imread(std::string(IMAGE_DEMORPHING_RES_DIR) + "mountains1.exr",
+        cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH), 2, minSettings, maxSettings);
+    images.emplace_back(cv::imread(std::string(IMAGE_DEMORPHING_RES_DIR) + "lenna.exr",
+        cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH), 2, minSettings, maxSettings);
 
-    cv::Mat img = cv::imread(std::string(IMAGE_DEMORPHING_RES_DIR) + "lenna.exr",
-        cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
-    images.emplace_back(std::move(img), 2, minSettings, maxSettings);
-
-    auto pair = makeFeaturePair(images, 1.0f);
-
+#if 0
     cv::imshow("original", images[0].original);
     cv::imshow("distorted1", images[0].distorted[0].distorted);
     cv::imshow("distorted2", images[0].distorted[1].distorted);
+#endif
 
-    visualizeFeature(pair.first, "f1");
-    visualizeFeature(pair.second, "f2");
-    cv::waitKey(0);
+    std::default_random_engine rnd(1507715517);
+
+    TrainingData trainingData;
+    trainingData.reserve(trainingDataSize);
+    for (int i=0; i<trainingDataSize; ++i) {
+        float similarity = rnd()%2 == 0 ? 0.0f : 0.5f+RND*0.5f;
+        trainingData.emplace_back(makeTrainingEntry(images, similarity));
+
+#if 0
+        visualizeFeature(trainingData.back().f1, "f1");
+        visualizeFeature(trainingData.back().f2, "f2");
+        cv::waitKey(0);
+#endif
+    }
+
+    return trainingData;
+}
+
+void trainFeatureDetector()
+{
+    auto trainingData = generateTrainingDataset(1000);
 }
