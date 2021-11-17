@@ -43,6 +43,7 @@ struct TrainingEntry {
 };
 
 using TrainingData = std::vector<TrainingEntry>;
+using TrainingBatch = std::vector<const TrainingEntry*>;
 
 
 TrainingEntry makeTrainingEntry(const TrainingImages& trainingImages, float similarity=0.0f);

@@ -136,7 +136,27 @@ TrainingData generateTrainingDataset(int trainingDataSize)
     return trainingData;
 }
 
+TrainingBatch sampleTrainingBatch(const TrainingData& data, int batchSize)
+{
+    TrainingBatch batch;
+    batch.reserve(batchSize);
+
+    static size_t p = 0;
+    for (int i=0; i<batchSize; ++i) {
+        batch.push_back(&data[p]);
+
+        if (++p >= data.size())
+            p=0;
+    }
+
+    return batch;
+}
+
 void trainFeatureDetector()
 {
-    auto trainingData = generateTrainingDataset(1000);
+    auto trainingData = generateTrainingDataset(1024);
+
+    for (int i=0; i<1000; ++i) {
+        auto batch = sampleTrainingBatch(trainingData, 32);
+    }
 }
