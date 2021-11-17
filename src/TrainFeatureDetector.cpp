@@ -34,7 +34,6 @@ TrainingImage::TrainingImage(cv::Mat&& image,
         DistortSettings settings {
             RANGE(minSettings.nMinTransforms, maxSettings.nMinTransforms),
             RANGE(minSettings.nMaxTransforms, maxSettings.nMaxTransforms),
-            RANGE(minSettings.maxPosition, maxSettings.maxPosition),
             RANGE(minSettings.minDistance, maxSettings.minDistance),
             RANGE(minSettings.maxDistance, maxSettings.maxDistance),
             RANGE(minSettings.maxRotation, maxSettings.maxRotation),
@@ -86,8 +85,7 @@ void trainFeatureDetector()
 {
     DistortSettings minSettings{
         10, 15,
-        Vec2d(1023.0, 1023.0), // todo remove?
-        64.0, 256.0,
+        128.0, 256.0,
         M_PI*0.0625,
         0.6, 0.9,
         Vec2d(32.0, 32.0)
@@ -95,7 +93,6 @@ void trainFeatureDetector()
 
     DistortSettings maxSettings{
         15, 25,
-        Vec2d(1023.0, 1023.0), // todo remove?
         256.0, 512.0,
         M_PI*0.125,
         0.85, 1.3,

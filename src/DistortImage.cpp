@@ -26,7 +26,7 @@ DistortedImage distortImage(const cv::Mat& image, const DistortSettings& setting
     int nTransforms = settings.nMinTransforms + rnd()%(settings.nMaxTransforms-settings.nMinTransforms+1);
     for (int i=0; i<nTransforms; ++i) {
         transforms.emplace_back(MorphTransform<double>::randomTransform(
-            settings.maxPosition,
+            Vec2d((double)image.cols, (double)image.rows),
             settings.minDistance,
             settings.maxDistance,
             settings.maxRotation,

@@ -21,7 +21,6 @@ struct DistortSettings {
     int nMinTransforms;
     int nMaxTransforms;
 
-    Vec2d   maxPosition;
     double  minDistance;
     double  maxDistance;
     double  maxRotation;
