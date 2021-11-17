@@ -65,47 +65,13 @@ struct ActivationReLU
 };
 
 
-// Layer CRTP base class
-template <typename T_Derived, typename T_Scalar, typename T_Activation,
-    int T_InputRows, int T_InputCols, int T_OutputRows, int T_OutputCols>
-class LayerBase
-{
-public:
-    using Input = Eigen::Matrix<T_Scalar, T_InputRows, T_InputCols>;
-    using Output = Eigen::Matrix<T_Scalar, T_OutputRows, T_OutputCols>;
-
-    // Forward propagation
-    inline __attribute__((always_inline)) Output operator()(const Input& x)
-    {
-        return static_cast<T_Derived*>(this)->operator()(x);
-    }
-
-    // Backpropagation
-    inline __attribute__((always_inline)) Input backpropagate(const Output& g)
-    {
-        return static_cast<T_Derived*>(this)->backpropagate(g);
-    }
-
-    // Apply gradients
-    inline __attribute__((always_inline)) void applyGradients(T_Scalar learningRate, T_Scalar momentum)
-    {
-        return static_cast<T_Derived*>(this)->applyGradients(learningRate, momentum);
-    }
-};
-
-
 template <typename T_Scalar, typename T_Activation,
     int T_InputRows, int T_OutputRows>
-class LayerDense : public LayerBase<LayerDense<
-    T_Scalar, T_Activation, T_InputRows, T_OutputRows>,
-    T_Scalar, T_Activation, T_InputRows, 1, T_OutputRows, 1>
+class LayerDense
 {
 public:
-    using Base = LayerBase<LayerDense<
-        T_Scalar, T_Activation, T_InputRows, T_OutputRows>,
-        T_Scalar, T_Activation, T_InputRows, 1, T_OutputRows, 1>;
-    using Input = typename Base::Input;
-    using Output = typename Base::Output;
+    using Input = Eigen::Matrix<T_Scalar, T_InputRows, 1>;
+    using Output = Eigen::Matrix<T_Scalar, T_OutputRows, 1>;
     using InputExtended = Eigen::Matrix<T_Scalar, T_InputRows+1, 1>;
     using Weights = Eigen::Matrix<T_Scalar, T_OutputRows, T_InputRows+1>;
 
@@ -164,16 +130,11 @@ private:
 
 template <typename T_Scalar, typename T_Activation,
     int T_InputRows, int T_InputCols, int T_OutputRows>
-class LayerMerge : public LayerBase<LayerMerge<
-    T_Scalar, T_Activation, T_InputRows, T_InputCols, T_OutputRows>,
-    T_Scalar, T_Activation, T_InputRows, T_InputCols, T_OutputRows, T_InputCols/2>
+class LayerMerge
 {
 public:
-    using Base = LayerBase<LayerMerge<
-        T_Scalar, T_Activation, T_InputRows, T_InputCols, T_OutputRows>,
-        T_Scalar, T_Activation, T_InputRows, T_InputCols, T_OutputRows, T_InputCols/2>;
-    using Input = typename Base::Input;
-    using Output = typename Base::Output;
+    using Input = Eigen::Matrix<T_Scalar, T_InputRows, T_InputCols>;
+    using Output = Eigen::Matrix<T_Scalar, T_OutputRows, T_InputCols/2>;
     using InputModified = Eigen::Matrix<T_Scalar, 2*T_InputRows+1, T_InputCols/2>;
     using Weights = Eigen::Matrix<T_Scalar, T_OutputRows, 2*T_InputRows+1>;
 
