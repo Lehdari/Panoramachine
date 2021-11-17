@@ -14,7 +14,6 @@
 #include "KdTree.hpp"
 #include <random>
 #include <Eigen/Dense>
-#include <opencv2/highgui.hpp>
 
 
 DistortedImage distortImage(const cv::Mat& image, const DistortSettings& settings)
@@ -48,7 +47,6 @@ DistortedImage distortImage(const cv::Mat& image, const DistortSettings& setting
     for (int j=0; j<distortedImage.distorted.rows; ++j) {
         auto* rDistorted = distortedImage.distorted.ptr<Vec3f>(j);
         auto* rBackward = distortedImage.backwardMap.ptr<Vec2f>(j);
-        //auto* rForward = distortedImage.forwardMap.ptr<Vec2f>(j);
         for (int i=0; i<distortedImage.distorted.cols; ++i) {
             Vec2d pTarget(i+0.5f, j+0.5f);
 
@@ -74,27 +72,15 @@ DistortedImage distortImage(const cv::Mat& image, const DistortSettings& setting
         }
     }
 
-    cv::Mat backMapped = image.clone();
-    cv::Mat forwardMapped = image.clone();
-
     for (int j=0; j<image.rows; ++j) {
         auto* rBackward = distortedImage.backwardMap.ptr<Vec2f>(j);
         auto* rForward = distortedImage.forwardMap.ptr<Vec2f>(j);
-        auto* rImage = image.ptr<Vec3f>(j);
-        auto* rDistorted = distortedImage.distorted.ptr<Vec3f>(j);
         for (int i=0; i<image.cols; ++i) {
             Vec2f p(i+0.5f, j+0.5f);
             Vec2i vb = (p+rBackward[i]).cast<int>();
             Vec2i vf = (p+rForward[i]).cast<int>();
-            backMapped.at<Vec3f>(std::clamp(vb(1), 0, image.rows-1), std::clamp(vb(0), 0, image.cols-1)) =
-                rDistorted[i];
-            forwardMapped.at<Vec3f>(std::clamp(vf(1), 0, image.rows-1), std::clamp(vf(0), 0, image.cols-1)) =
-                rImage[i];
         }
     }
-
-    cv::imshow("backMapped", backMapped);
-    cv::imshow("forwardMapped", forwardMapped);
 
     return distortedImage;
 }
