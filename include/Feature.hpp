@@ -22,8 +22,7 @@ struct Feature {
     static constexpr int fsr = 128; // feature radial size
     static constexpr float frm = 1.1387886347566f; // feature radius multiplier
 
-    Eigen::Matrix<float, fsa*3, fsr> polar;
-    Eigen::Matrix<float, fsa*3, fsr> polarDiff;
+    Eigen::Matrix<float, fsa*6, fsr>    polar;
 
     Feature(const cv::Mat& img, const Vec2f& p, float firstRadius);
 };

@@ -27,7 +27,7 @@ Feature::Feature(const cv::Mat& img, const Vec2f& p, float firstRadius)
     }
 
     for (int i=0; i<Feature::fsr; ++i) {
-        polarDiff.block<Feature::fsa*3, 1>(0, i) =
+        polar.block<Feature::fsa*3, 1>(fsa*3, i) =
             polar.block<Feature::fsa*3, 1>(0, (i+1)%Feature::fsr) -
                 polar.block<Feature::fsa*3, 1>(0, i);
     }
@@ -35,7 +35,7 @@ Feature::Feature(const cv::Mat& img, const Vec2f& p, float firstRadius)
 
 void visualizeFeature(Feature& feature, const std::string& windowName)
 {
-    cv::Mat featureImg(Feature::fsr, Feature::fsa, CV_32FC3);
+    cv::Mat featureImg(Feature::fsr, Feature::fsa*2, CV_32FC3);
     featureImg.data = reinterpret_cast<unsigned char*>(feature.polar.data());
     cv::imshow(windowName, featureImg);
 }
