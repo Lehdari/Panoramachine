@@ -14,6 +14,7 @@
 
 #include "MathTypes.hpp"
 #include <opencv2/core/mat.hpp>
+#include <fstream>
 
 
 Vec3f sampleMatCubic(const cv::Mat& m, const Vec2f& p);
