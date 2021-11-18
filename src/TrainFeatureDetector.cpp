@@ -10,6 +10,7 @@
 
 #include "TrainFeatureDetector.hpp"
 #include "Utils.hpp"
+#include "FeatureDetector.hpp"
 #include <opencv2/highgui.hpp>
 
 
@@ -85,7 +86,7 @@ TrainingEntry makeTrainingEntry(const TrainingImages& trainingImages, float simi
         p2 += ddir*entrySimilarityDistance(similarity);
     }
 
-    return { Feature(*img1, p1, 2.0f), Feature(*img2, p2, 2.0f), similarity };
+    return { Feature(*img1, p1, 2.0f), Feature(*img2, p2, 2.0f), std::clamp(similarity*2.0f-1.0f, -0.999f, 0.999f) };
 }
 
 TrainingData generateTrainingDataset(int trainingDataSize)
@@ -154,9 +155,21 @@ TrainingBatch sampleTrainingBatch(const TrainingData& data, int batchSize)
 
 void trainFeatureDetector()
 {
+    constexpr int trainingDataSize = 1024;
+    constexpr int batchSize = 32;
+    constexpr int batchesInEpoch = trainingDataSize / batchSize;
+    constexpr int nEpochs = 1024;
+
     auto trainingData = generateTrainingDataset(1024);
 
-    for (int i=0; i<1000; ++i) {
-        auto batch = sampleTrainingBatch(trainingData, 32);
+    FeatureDetector detector;
+
+    for (int e=0; e<nEpochs; ++e) {
+        double loss = 0.0;
+        for (int i=0; i<batchesInEpoch; ++i) {
+            auto batch = sampleTrainingBatch(trainingData, batchSize);
+            loss += detector.trainBatch(batch);
+        }
+        printf("Epoch %d finished, loss: %0.10f\n", e, loss/batchesInEpoch);
     }
 }
