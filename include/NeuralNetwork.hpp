@@ -20,13 +20,13 @@
 struct ActivationTanh
 {
     template <typename T>
-    inline __attribute__((always_inline)) static auto activation(const T& x)
+    inline __attribute__((always_inline)) auto activation(const T& x)
     {
         return x.array().tanh();
     }
 
     template <typename T>
-    inline __attribute__((always_inline)) static auto gradient(const T& x)
+    inline __attribute__((always_inline)) auto gradient(const T& x)
     {
         return T::Ones() - x.array().tanh().square().matrix();
     }
@@ -36,36 +36,83 @@ struct ActivationTanh
 struct ActivationLinear
 {
     template <typename T>
-    inline __attribute__((always_inline)) static auto activation(const T& x)
+    inline __attribute__((always_inline)) auto activation(const T& x)
     {
         return x;
     }
 
     template <typename T>
-    inline __attribute__((always_inline)) static auto gradient(const T& x)
+    inline __attribute__((always_inline)) auto gradient(const T& x)
     {
         return T::Ones();
     }
 };
 
-// Linear activation function
+// (Leaky) ReLU activation function
 struct ActivationReLU
 {
+    ActivationReLU(float alpha = 0.0f) :
+        _alpha  (alpha),
+        _x      ((2.0f/(1.0f-_alpha))-1.0f),
+        _y      ((1.0f-_alpha)/2.0f)
+    {}
+
     template <typename T>
-    inline __attribute__((always_inline)) static auto activation(const T& x)
+    inline __attribute__((always_inline)) auto activation(const T& x)
     {
-        return x.cwiseMax(T::Zero());
+        return x.cwiseMax(T::Ones()*_alpha);
     }
 
     template <typename T>
-    inline __attribute__((always_inline)) static auto gradient(const T& x)
+    inline __attribute__((always_inline)) auto gradient(const T& x)
     {
-        return x.array().sign().matrix()*0.5 + T::Ones()*0.5;
+        return (x.array().sign().matrix() + _x*T::Ones())*_y;
     }
+
+private:
+    float   _alpha;
+    float   _x;
+    float   _y;
 };
 
 
-template <typename T_Scalar, typename T_Activation,
+template <typename T_Weights>
+struct OptimizerAdam
+{
+    template <typename T_Scalar>
+    OptimizerAdam(T_Scalar initAmplitude = 1.0) :
+        w   (T_Weights::Random() * initAmplitude),
+        wg  (T_Weights::Zero()),
+        wm  (T_Weights::Zero()),
+        wv  (T_Weights::Zero()),
+        t   (0)
+    {}
+
+    template <typename T_Scalar>
+    inline void applyGradients(T_Scalar learningRate = 0.001, T_Scalar momentum = 0.9, T_Scalar momentum2 = 0.999)
+    {
+        const T_Scalar epsilon = 1.0e-8;
+        ++t;
+
+        wm = momentum*wm + (1.0-momentum)*wg; // update first moment
+        wv = momentum*wv + (1.0-momentum2)*(wg.array().square().matrix()); // update second moment
+
+        T_Scalar alpha = learningRate * (std::sqrt(1.0 - std::pow(momentum2, (T_Scalar)t)) /
+            (1.0 - std::pow(momentum, (T_Scalar)t)));
+
+        w -= alpha * wm.template cwiseProduct((wv.cwiseSqrt()+T_Weights::Ones()*epsilon).cwiseInverse());
+        wg = T_Weights::Zero();
+    }
+
+    T_Weights   w;
+    T_Weights   wg; // gradient
+    T_Weights   wm; // first moment
+    T_Weights   wv; // second moment
+    int         t; // timestep index
+};
+
+
+template <typename T_Scalar, typename T_Activation, template <typename> class T_Optimizer,
     int T_InputRows, int T_OutputRows>
 class LayerDense
 {
@@ -75,60 +122,51 @@ public:
     using InputExtended = Eigen::Matrix<T_Scalar, T_InputRows+1, 1>;
     using Weights = Eigen::Matrix<T_Scalar, T_OutputRows, T_InputRows+1>;
 
-    LayerDense(T_Scalar initAmplitude = 1) :
-        _input  (InputExtended::Ones()),
-        _w      (Weights::Random() * initAmplitude),
-        _wg     (Weights::Zero()),
-        _wm     (Weights::Zero()),
-        _wv     (Weights::Zero()),
-        _t      (0)
+    LayerDense(T_Scalar initAmplitude = 1.0,
+        T_Activation&& activation = T_Activation()) :
+        _activation (activation),
+        _optimizer  (std::make_shared<T_Optimizer<Weights>>(initAmplitude)),
+        _input      (InputExtended::Ones())
+    {
+    }
+
+    LayerDense(
+        T_Activation&& activation,
+        T_Optimizer<Weights>* optimizer) :
+        _activation (activation),
+        _optimizer  (optimizer),
+        _input      (InputExtended::Ones())
     {
     }
 
     inline Output operator()(const Input& x)
     {
         _input.template block<T_InputRows,1>(0,0) = x;
-        return T_Activation::activation(_w * _input);
+        return _activation.activation(_optimizer->w * _input);
     }
 
     inline Input backpropagate(const Output& g)
     {
-        Output ag = T_Activation::gradient(g).cwiseProduct(g);
-        _wg += ag * _input.transpose();
-        return _w.template block<T_OutputRows, T_InputRows>(0,0).transpose() * ag;
+        Output ag = _activation.gradient(g).cwiseProduct(g);
+        _optimizer->wg += ag * _input.transpose();
+        return _optimizer->w.template block<T_OutputRows, T_InputRows>(0,0).transpose() * ag;
     }
 
-    inline void applyGradients(T_Scalar learningRate = 0.001, T_Scalar momentum = 0.9, T_Scalar momentum2 = 0.999)
+    T_Optimizer<Weights>* getOptimizer()
     {
-        const T_Scalar epsilon = 1.0e-8;
-        ++_t;
-
-        _wm = momentum*_wm + (1.0-momentum)*_wg; // update first moment
-        _wv = momentum*_wv + (1.0-momentum2)*(_wg.array().square().matrix()); // update second moment
-
-        T_Scalar alpha = learningRate * (std::sqrt(1.0 - std::pow(momentum2, (T_Scalar)_t)) /
-            (1.0 - std::pow(momentum, (T_Scalar)_t)));
-
-        //printf("t: %d alpha: %0.15f\n", _t, alpha);
-
-        _w -= alpha * _wm.template cwiseProduct((_wv.cwiseSqrt()+Weights::Ones()*epsilon).cwiseInverse());
-        _wg = Weights::Zero();
-
-        _w *= 0.99999;
+        return _optimizer.get();
     }
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
 private:
-    InputExtended   _input;
-    Weights         _w;
-    Weights         _wg; // gradient
-    Weights         _wm; // first moment
-    Weights         _wv; // second moment
-    int             _t; // timestep index
+    T_Activation                            _activation;
+    std::shared_ptr<T_Optimizer<Weights>>   _optimizer;
+    InputExtended                           _input;
 };
 
 
-template <typename T_Scalar, typename T_Activation,
+template <typename T_Scalar, typename T_Activation, template <typename> class T_Optimizer,
     int T_InputRows, int T_InputCols, int T_OutputRows>
 class LayerMerge
 {
@@ -138,13 +176,20 @@ public:
     using InputModified = Eigen::Matrix<T_Scalar, 2*T_InputRows+1, T_InputCols/2>;
     using Weights = Eigen::Matrix<T_Scalar, T_OutputRows, 2*T_InputRows+1>;
 
-    LayerMerge(T_Scalar initAmplitude = 1) :
-        _input  (InputModified::Ones()),
-        _w      (Weights::Random() * initAmplitude),
-        _wg     (Weights::Zero()),
-        _wm     (Weights::Zero()),
-        _wv     (Weights::Zero()),
-        _t      (0)
+    LayerMerge(T_Scalar initAmplitude = 1.0,
+        T_Activation&& activation = T_Activation()) :
+        _activation (activation),
+        _optimizer  (std::make_shared<T_Optimizer<Weights>>(initAmplitude)),
+        _input      (InputModified::Ones())
+    {
+    }
+
+    LayerMerge(
+        T_Activation&& activation,
+        T_Optimizer<Weights>* optimizer) :
+        _activation (activation),
+        _optimizer  (optimizer),
+        _input      (InputModified::Ones())
     {
     }
 
@@ -154,15 +199,14 @@ public:
             x.template block<T_InputRows,T_InputCols/2>(0,0);
         _input.template block<T_InputRows,T_InputCols/2>(T_InputRows,0) =
             x.template block<T_InputRows,T_InputCols/2>(0,T_InputCols/2);
-        return T_Activation::activation(_w * _input);
+        return _activation.activation(_optimizer->w * _input);
     }
 
     inline Input backpropagate(const Output& g)
     {
-        Output ag = T_Activation::gradient(g).cwiseProduct(g);
-        _wg += ag * _input.transpose();
-        //_wg = ag * _input.transpose();
-        auto igModified = _w.template block<T_OutputRows, 2*T_InputRows>(0,0).transpose() * ag;
+        Output ag = _activation.gradient(g).cwiseProduct(g);
+        _optimizer->wg += ag * _input.transpose();
+        auto igModified = _optimizer->w.template block<T_OutputRows, 2*T_InputRows>(0,0).transpose() * ag;
         Input ig;
         ig <<
             igModified.template block<T_InputRows, T_InputCols/2>(0,0),
@@ -170,31 +214,17 @@ public:
         return ig;
     }
 
-    inline void applyGradients(T_Scalar learningRate = 0.001, T_Scalar momentum = 0.9, T_Scalar momentum2 = 0.999)
+    T_Optimizer<Weights>* getOptimizer()
     {
-        const T_Scalar epsilon = 1.0e-8;
-        ++_t;
-
-        _wm = momentum*_wm + (1.0-momentum)*_wg; // update first moment
-        _wv = momentum*_wv + (1.0-momentum2)*(_wg.array().square().matrix()); // update second moment
-
-        T_Scalar alpha = learningRate * (std::sqrt(1.0 - std::pow(momentum2, (T_Scalar)_t)) /
-            (1.0 - std::pow(momentum, (T_Scalar)_t)));
-
-        _w -= alpha * _wm.template cwiseProduct((_wv.cwiseSqrt()+Weights::Ones()*epsilon).cwiseInverse());
-        _wg = Weights::Zero();
-
-        _w *= 0.99999;
+        return _optimizer.get();
     }
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
 private:
-    InputModified   _input;
-    Weights         _w;
-    Weights         _wg; // gradient
-    Weights         _wm; // first moment
-    Weights         _wv; // second moment
-    int             _t; // timestep index
+    T_Activation                            _activation;
+    std::shared_ptr<T_Optimizer<Weights>>   _optimizer;
+    InputModified                           _input;
 };
 
 
