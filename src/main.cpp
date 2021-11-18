@@ -11,18 +11,21 @@
 #include "CorrectionAlgorithms.hpp"
 #include "DistortImage.hpp"
 #include "Utils.hpp"
+#include "TrainFeatureDetector.hpp"
 #include <opencv2/highgui.hpp>
 #include <random>
 
 
 int main(void)
 {
+    trainFeatureDetector();
+
+#if 0
     std::string imageFileName = std::string(IMAGE_DEMORPHING_RES_DIR) + "lenna.exr";
     cv::Mat image = cv::imread(imageFileName, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
 
     DistortSettings settings{
         15, 25,
-        Vec2d(image.cols, image.rows),
         128.0, 512.0,
         M_PI*0.125,
         0.85, 0.9,
@@ -37,6 +40,7 @@ int main(void)
 
     createCorrection2(distortedImage.distorted, image);
     cv::waitKey(0);
+#endif
 
     return 0;
 }
