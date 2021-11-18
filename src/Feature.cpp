@@ -14,6 +14,11 @@
 #include <opencv2/highgui.hpp>
 
 
+Feature::Feature() :
+    polar   (Eigen::Matrix<float, fsa*6, fsr>::Zero())
+{
+}
+
 Feature::Feature(const cv::Mat& img, const Vec2f& p, float firstRadius)
 {
     for (int i=0; i<Feature::fsr; ++i) {
@@ -32,6 +37,7 @@ Feature::Feature(const cv::Mat& img, const Vec2f& p, float firstRadius)
                 polar.block<Feature::fsa*3, 1>(0, i);
     }
 }
+
 
 void visualizeFeature(Feature& feature, const std::string& windowName)
 {
