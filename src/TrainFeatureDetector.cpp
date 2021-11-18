@@ -12,6 +12,7 @@
 #include "Utils.hpp"
 #include "FeatureDetector.hpp"
 #include <opencv2/highgui.hpp>
+#include <iomanip>
 
 
 #define RND ((rnd()%1000001)*0.000001)
@@ -137,6 +138,46 @@ TrainingData generateTrainingDataset(int trainingDataSize)
     return trainingData;
 }
 
+void saveTrainingDataset(const TrainingData& data)
+{
+    for (int i=0; i<data.size(); ++i) {
+        std::stringstream filename1, filename2, filenameSimilarity;
+        filename1 << "temp/feature_" << std::setfill('0') << std::setw(4) << i << "_f1.bin";
+        filename2 << "temp/feature_" << std::setfill('0') << std::setw(4) << i << "_f2.bin";
+        filenameSimilarity << "temp/feature_" << std::setfill('0') << std::setw(4) << i << "_similarity.txt";
+
+        writeMatrixBinary(filename1.str(), data[i].f1.polar);
+        writeMatrixBinary(filename2.str(), data[i].f2.polar);
+
+        std::ofstream similarityFile;
+        similarityFile.open(filenameSimilarity.str());
+        similarityFile << data[i].similarity << std::endl;
+        similarityFile.close();
+    }
+}
+
+TrainingData loadTrainingDataset(int trainingDataSize)
+{
+    TrainingData trainingData;
+    trainingData.reserve(trainingDataSize);
+    for (int i=0; i<trainingDataSize; ++i) {
+        trainingData.emplace_back();
+        std::stringstream filename1, filename2, filenameSimilarity;
+        filename1 << "temp/feature_" << std::setfill('0') << std::setw(4) << i << "_f1.bin";
+        filename2 << "temp/feature_" << std::setfill('0') << std::setw(4) << i << "_f2.bin";
+        filenameSimilarity << "temp/feature_" << std::setfill('0') << std::setw(4) << i << "_similarity.txt";
+
+        readMatrixBinary(filename1.str(), trainingData.back().f1.polar);
+        readMatrixBinary(filename2.str(), trainingData.back().f2.polar);
+
+        std::ifstream similarityFile;
+        similarityFile.open(filenameSimilarity.str());
+        similarityFile >> trainingData.back().similarity;
+        similarityFile.close();
+    }
+    return trainingData;
+}
+
 TrainingBatch sampleTrainingBatch(const TrainingData& data, int batchSize)
 {
     TrainingBatch batch;
@@ -160,7 +201,12 @@ void trainFeatureDetector()
     constexpr int batchesInEpoch = trainingDataSize / batchSize;
     constexpr int nEpochs = 1024;
 
-    auto trainingData = generateTrainingDataset(1024);
+#if 1
+    auto trainingData = generateTrainingDataset(trainingDataSize);
+    saveTrainingDataset(trainingData);
+#else
+    auto trainingData = loadTrainingDataset(trainingDataSize);
+#endif
 
     FeatureDetector detector;
 
