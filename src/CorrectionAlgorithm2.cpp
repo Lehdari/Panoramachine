@@ -16,7 +16,7 @@
 #include <KdTree.hpp>
 #include <NeuralNetwork.hpp>
 
-
+#if 0
 #define RND ((rnd()%1000001)*0.000001)
 
 
@@ -372,3 +372,4 @@ cv::Mat createCorrection2(const cv::Mat& source, const cv::Mat& target)
 
     return corr;
 }
+#endif
