@@ -12,8 +12,8 @@
 #include "MorphTransform.hpp"
 #include "Utils.hpp"
 #include "KdTree.hpp"
+#include "MathTypes.hpp"
 #include <random>
-#include <Eigen/Dense>
 
 
 DistortedImage distortImage(const cv::Mat& image, const DistortSettings& settings)

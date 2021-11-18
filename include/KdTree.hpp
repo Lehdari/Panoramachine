@@ -12,7 +12,7 @@
 #define IMAGE_DEMORPHING_KDTREE_HPP
 
 
-#include <Eigen/Dense>
+#include "MathTypes.hpp"
 
 
 template <typename... Args>

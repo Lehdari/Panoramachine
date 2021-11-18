@@ -12,7 +12,7 @@
 #define IMAGE_DEMORPHING_MORPHTRANSFORM_HPP
 
 
-#include <Eigen/Dense>
+#include "MathTypes.hpp"
 #include <random>
 
 

@@ -12,7 +12,7 @@
 #define IMAGE_DEMORPHING_NEURALNETWORK_HPP
 
 
-#include <Eigen/Dense>
+#include "MathTypes.hpp"
 #include <iostream> // TODO temp
 
 
