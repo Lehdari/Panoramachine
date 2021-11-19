@@ -211,11 +211,17 @@ void trainFeatureDetector()
     FeatureDetector detector;
 
     for (int e=0; e<nEpochs; ++e) {
+        auto t1 = std::chrono::high_resolution_clock::now();
+
         double loss = 0.0;
         for (int i=0; i<batchesInEpoch; ++i) {
             auto batch = sampleTrainingBatch(trainingData, batchSize);
             loss += detector.trainBatch(batch);
         }
-        printf("Epoch %d finished, loss: %0.10f\n", e, loss/batchesInEpoch);
+
+        auto t2 = std::chrono::high_resolution_clock::now();
+
+        printf("Epoch %d finished, loss: %0.10f, time: %ld\n", e, loss/batchesInEpoch,
+            std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
     }
 }
