@@ -12,17 +12,17 @@
 
 
 FeatureDetector::FeatureDetector() :
-    _layer1a(0.01f, ActivationReLU(0.01f)), _layer1b(ActivationReLU(0.01f), _layer1a.getOptimizer()),
-    _layer2a(0.01f, ActivationReLU(0.01f)), _layer2b(ActivationReLU(0.01f), _layer2a.getOptimizer()),
-    _layer3a(0.01f, ActivationReLU(0.01f)), _layer3b(ActivationReLU(0.01f), _layer3a.getOptimizer()),
-    _layer4a(0.01f, ActivationReLU(0.01f)), _layer4b(ActivationReLU(0.01f), _layer4a.getOptimizer()),
-    _layer5a(0.01f, ActivationReLU(0.01f)), _layer5b(ActivationReLU(0.01f), _layer5a.getOptimizer()),
-    _layer6a(0.01f, ActivationReLU(0.01f)), _layer6b(ActivationReLU(0.01f), _layer6a.getOptimizer()),
-    _layer7a(0.01f, ActivationReLU(0.01f)), _layer7b(ActivationReLU(0.01f), _layer7a.getOptimizer()),
-    _layer8a(0.01f, ActivationReLU(0.01f)), _layer8b(ActivationReLU(0.01f), _layer8a.getOptimizer()),
-    _layer9a(0.01f, ActivationReLU(0.01f)), _layer9b(ActivationReLU(0.01f), _layer9a.getOptimizer()),
-    _layer10a(0.01f, ActivationTanh()), _layer10b(ActivationTanh(), _layer10a.getOptimizer()),
-    _layer11(0.01f)
+    _layer1a(0.1f, ActivationReLU(0.01f)), _layer1b(ActivationReLU(0.01f), _layer1a.getOptimizerPtr()),
+    _layer2a(0.1f, ActivationReLU(0.01f)), _layer2b(ActivationReLU(0.01f), _layer2a.getOptimizerPtr()),
+    _layer3a(0.1f, ActivationReLU(0.01f)), _layer3b(ActivationReLU(0.01f), _layer3a.getOptimizerPtr()),
+    _layer4a(0.1f, ActivationReLU(0.01f)), _layer4b(ActivationReLU(0.01f), _layer4a.getOptimizerPtr()),
+    _layer5a(0.1f, ActivationReLU(0.01f)), _layer5b(ActivationReLU(0.01f), _layer5a.getOptimizerPtr()),
+    _layer6a(0.1f, ActivationReLU(0.01f)), _layer6b(ActivationReLU(0.01f), _layer6a.getOptimizerPtr()),
+    _layer7a(0.1f, ActivationReLU(0.01f)), _layer7b(ActivationReLU(0.01f), _layer7a.getOptimizerPtr()),
+    _layer8a(0.1f, ActivationReLU(0.01f)), _layer8b(ActivationReLU(0.01f), _layer8a.getOptimizerPtr()),
+    _layer9a(0.1f, ActivationReLU(0.01f)), _layer9b(ActivationReLU(0.01f), _layer9a.getOptimizerPtr()),
+    _layer10a(0.1f, ActivationTanh()), _layer10b(ActivationTanh(), _layer10a.getOptimizerPtr()),
+    _layer11(0.1f)
 {
 }
 

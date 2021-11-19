@@ -137,7 +137,7 @@ public:
 
     LayerDense(
         T_Activation&& activation,
-        T_Optimizer<Weights>* optimizer) :
+        const std::shared_ptr<T_Optimizer<Weights>>& optimizer) :
         _activation (activation),
         _optimizer  (optimizer),
         _input      (InputExtended::Ones())
@@ -160,6 +160,11 @@ public:
     T_Optimizer<Weights>* getOptimizer()
     {
         return _optimizer.get();
+    }
+
+    const std::shared_ptr<T_Optimizer<Weights>>& getOptimizerPtr()
+    {
+        return _optimizer;
     }
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -191,7 +196,7 @@ public:
 
     LayerMerge(
         T_Activation&& activation,
-        T_Optimizer<Weights>* optimizer) :
+        const std::shared_ptr<T_Optimizer<Weights>>& optimizer) :
         _activation (activation),
         _optimizer  (optimizer),
         _input      (InputModified::Ones())
@@ -222,6 +227,11 @@ public:
     T_Optimizer<Weights>* getOptimizer()
     {
         return _optimizer.get();
+    }
+
+    const std::shared_ptr<T_Optimizer<Weights>>& getOptimizerPtr()
+    {
+        return _optimizer;
     }
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
