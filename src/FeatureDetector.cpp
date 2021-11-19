@@ -55,9 +55,9 @@ double FeatureDetector::trainBatch(const TrainingBatch& batch)
 float FeatureDetector::trainingPass(const Feature& f1, const Feature& f2, float targetSimilarity)
 {
     // forward propagate
-    auto v1 = _layer10a(_layer9a(_layer8a(_layer7a(_layer6a(_layer5a(_layer4a(_layer3a(_layer2a(_layer1a(f1.polar))))))))));
-    auto v2 = _layer10b(_layer9b(_layer8b(_layer7b(_layer6b(_layer5b(_layer4b(_layer3b(_layer2b(_layer1b(f2.polar))))))))));
-    auto v3 = v1-v2;
+    Layer10::Output v1 = _layer10a(_layer9a(_layer8a(_layer7a(_layer6a(_layer5a(_layer4a(_layer3a(_layer2a(_layer1a(f1.polar))))))))));
+    Layer10::Output v2 = _layer10b(_layer9b(_layer8b(_layer7b(_layer6b(_layer5b(_layer4b(_layer3b(_layer2b(_layer1b(f2.polar))))))))));
+    Layer10::Output v3 = v1-v2;
     float similarityPrediction = _layer11(v3)(0,0);
 
     // loss
