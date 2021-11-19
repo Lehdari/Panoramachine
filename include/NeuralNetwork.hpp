@@ -147,12 +147,13 @@ public:
     inline Output operator()(const Input& x)
     {
         _input.template block<T_InputRows,1>(0,0) = x;
-        return _activation.activation(_optimizer->w * _input);
+        _weighed = _optimizer->w * _input;
+        return _activation.activation(_weighed);
     }
 
     inline Input backpropagate(const Output& g)
     {
-        Output ag = _activation.gradient(g).cwiseProduct(g);
+        Output ag = _activation.gradient(_weighed).cwiseProduct(g);
         _optimizer->wg += ag * _input.transpose();
         return _optimizer->w.template block<T_OutputRows, T_InputRows>(0,0).transpose() * ag;
     }
@@ -172,7 +173,8 @@ public:
 private:
     T_Activation                            _activation;
     std::shared_ptr<T_Optimizer<Weights>>   _optimizer;
-    InputExtended                           _input;
+    InputExtended                           _input; // last input
+    Output                                  _weighed; // weights * input
 };
 
 
@@ -209,12 +211,13 @@ public:
             x.template block<T_InputRows,T_InputCols/2>(0,0);
         _input.template block<T_InputRows,T_InputCols/2>(T_InputRows,0) =
             x.template block<T_InputRows,T_InputCols/2>(0,T_InputCols/2);
-        return _activation.activation(_optimizer->w * _input);
+        _weighed = _optimizer->w * _input;
+        return _activation.activation(_weighed);
     }
 
     inline Input backpropagate(const Output& g)
     {
-        Output ag = _activation.gradient(g).cwiseProduct(g);
+        Output ag = _activation.gradient(_weighed).cwiseProduct(g);
         _optimizer->wg += ag * _input.transpose();
         auto igModified = _optimizer->w.template block<T_OutputRows, 2*T_InputRows>(0,0).transpose() * ag;
         Input ig;
@@ -239,7 +242,8 @@ public:
 private:
     T_Activation                            _activation;
     std::shared_ptr<T_Optimizer<Weights>>   _optimizer;
-    InputModified                           _input;
+    InputModified                           _input; // last input
+    Output                                  _weighed; // weights * input
 };
 
 
