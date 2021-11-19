@@ -25,16 +25,16 @@ public:
 
 private:
     using Layer1 = LayerMerge<float, ActivationReLU, OptimizerAdam, Feature::fsa*6, Feature::fsr, 64>;
-    using Layer2 = LayerMerge<float, ActivationReLU, OptimizerAdam, 64, Feature::fsr/2, 64>;
-    using Layer3 = LayerMerge<float, ActivationReLU, OptimizerAdam, 64, Feature::fsr/4, 64>;
-    using Layer4 = LayerMerge<float, ActivationReLU, OptimizerAdam, 64, Feature::fsr/8, 64>;
-    using Layer5 = LayerMerge<float, ActivationReLU, OptimizerAdam, 64, Feature::fsr/16, 64>;
-    using Layer6 = LayerMerge<float, ActivationReLU, OptimizerAdam, 64, Feature::fsr/32, 64>;
-    using Layer7 = LayerMerge<float, ActivationReLU, OptimizerAdam, 64, Feature::fsr/64, 64>;
-    using Layer8 = LayerDense<float, ActivationReLU, OptimizerAdam, 64, 32>;
-    using Layer9 = LayerDense<float, ActivationReLU, OptimizerAdam, 32, 16>;
-    using Layer10 = LayerDense<float, ActivationTanh, OptimizerAdam, 16, 8>;
-    using Layer11 = LayerDense<float, ActivationTanh, OptimizerAdam, 8, 1>;
+    using Layer2 = LayerMerge<float, ActivationReLU, OptimizerAdam, 64, Feature::fsr/2, 32>;
+    using Layer3 = LayerMerge<float, ActivationReLU, OptimizerAdam, 32, Feature::fsr/4, 32>;
+    using Layer4 = LayerMerge<float, ActivationReLU, OptimizerAdam, 32, Feature::fsr/8, 32>;
+    using Layer5 = LayerMerge<float, ActivationReLU, OptimizerAdam, 32, Feature::fsr/16, 32>;
+    using Layer6 = LayerMerge<float, ActivationReLU, OptimizerAdam, 32, Feature::fsr/32, 32>;
+    using Layer7 = LayerMerge<float, ActivationReLU, OptimizerAdam, 32, Feature::fsr/64, 32>;
+    using Layer8 = LayerDense<float, ActivationReLU, OptimizerAdam, 32, 32>;
+    using Layer9 = LayerDense<float, ActivationReLU, OptimizerAdam, 32, 32>;
+    using Layer10 = LayerDense<float, ActivationTanh, OptimizerAdam, 32, 16>;
+    using Layer11 = LayerDense<float, ActivationTanh, OptimizerAdam, 16, 1>;
 
     Layer1  _layer1a, _layer1b;
     Layer2  _layer2a, _layer2b;
