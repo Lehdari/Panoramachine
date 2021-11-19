@@ -86,7 +86,10 @@ struct OptimizerAdam
         wm  (T_Weights::Zero()),
         wv  (T_Weights::Zero()),
         t   (0)
-    {}
+    {
+        w.template block<T_Weights::RowsAtCompileTime,1>(0,T_Weights::ColsAtCompileTime-1) =
+            Eigen::Matrix<T_Scalar,T_Weights::RowsAtCompileTime,1>::Zero();
+    }
 
     template <typename T_Scalar>
     inline void applyGradients(T_Scalar learningRate = 0.001, T_Scalar momentum = 0.9, T_Scalar momentum2 = 0.999)
