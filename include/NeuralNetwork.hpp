@@ -60,7 +60,7 @@ struct ActivationReLU
     template <typename T>
     inline __attribute__((always_inline)) auto activation(const T& x)
     {
-        return x.cwiseMax(T::Ones()*_alpha);
+        return x.cwiseMax(x*_alpha);
     }
 
     template <typename T>
