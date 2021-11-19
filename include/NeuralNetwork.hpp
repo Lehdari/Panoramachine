@@ -112,6 +112,8 @@ struct OptimizerAdam
     T_Weights   wm; // first moment
     T_Weights   wv; // second moment
     int         t; // timestep index
+
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
 
