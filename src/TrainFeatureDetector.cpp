@@ -90,7 +90,7 @@ TrainingEntry makeTrainingEntry(const TrainingImages& trainingImages, float simi
     return { Feature(*img1, p1, 2.0f), Feature(*img2, p2, 2.0f), std::clamp(similarity*2.0f-1.0f, -0.999f, 0.999f) };
 }
 
-TrainingData generateDataset(int datasetSize)
+void generateTrainingImages(TrainingImages& trainingImages)
 {
     DistortSettings minSettings{
         10, 15,
@@ -108,10 +108,10 @@ TrainingData generateDataset(int datasetSize)
         Vec2d(64.0, 64.0)
     };
 
-    TrainingImages images;
-    images.emplace_back(cv::imread(std::string(IMAGE_DEMORPHING_RES_DIR) + "mountains1.exr",
+    trainingImages.clear();
+    trainingImages.emplace_back(cv::imread(std::string(IMAGE_DEMORPHING_RES_DIR) + "mountains1.exr",
         cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH), 2, minSettings, maxSettings);
-    images.emplace_back(cv::imread(std::string(IMAGE_DEMORPHING_RES_DIR) + "lenna.exr",
+    trainingImages.emplace_back(cv::imread(std::string(IMAGE_DEMORPHING_RES_DIR) + "lenna.exr",
         cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH), 2, minSettings, maxSettings);
 
 #if 0
@@ -119,14 +119,17 @@ TrainingData generateDataset(int datasetSize)
     cv::imshow("distorted1", images[0].distorted[0].distorted);
     cv::imshow("distorted2", images[0].distorted[1].distorted);
 #endif
+}
 
-    std::default_random_engine rnd(1507715517);
+void generateDataset(TrainingData& trainingData, const TrainingImages& trainingImages, int datasetSize)
+{
+    static std::default_random_engine rnd(1507715517);
 
-    TrainingData trainingData;
+    trainingData.clear();
     trainingData.reserve(datasetSize);
     for (int i=0; i<datasetSize; ++i) {
         float similarity = rnd()%2 == 0 ? 0.0f : 0.5f+RND*0.5f;
-        trainingData.emplace_back(makeTrainingEntry(images, similarity));
+        trainingData.emplace_back(makeTrainingEntry(trainingImages, similarity));
 
 #if 0
         visualizeFeature(trainingData.back().f1, "f1");
@@ -134,8 +137,6 @@ TrainingData generateDataset(int datasetSize)
         cv::waitKey(0);
 #endif
     }
-
-    return trainingData;
 }
 
 void saveDataset(const TrainingData& data)
@@ -156,9 +157,9 @@ void saveDataset(const TrainingData& data)
     }
 }
 
-TrainingData loadDataset(int datasetSize)
+void loadDataset(TrainingData& trainingData, int datasetSize)
 {
-    TrainingData trainingData;
+    trainingData.clear();
     trainingData.reserve(datasetSize);
     for (int i=0; i<datasetSize; ++i) {
         trainingData.emplace_back();
@@ -175,7 +176,6 @@ TrainingData loadDataset(int datasetSize)
         similarityFile >> trainingData.back().similarity;
         similarityFile.close();
     }
-    return trainingData;
 }
 
 TrainingBatch sampleTrainingBatch(const TrainingData& data, int trainingDatasetSize, int batchSize)
@@ -196,31 +196,37 @@ TrainingBatch sampleTrainingBatch(const TrainingData& data, int trainingDatasetS
 
 void trainFeatureDetector()
 {
-    constexpr int datasetSize = 1024;
+    constexpr int datasetSize = 2048;
     constexpr int trainingDatasetSize = (datasetSize/8)*7;
     constexpr int evaluationDatasetSize = datasetSize/8;
     constexpr int batchSize = 64;
     constexpr int batchesInEpoch = trainingDatasetSize / batchSize;
     constexpr int nEpochs = 100000;
 
+    TrainingImages trainingImages;
+    generateTrainingImages(trainingImages);
+
+    TrainingData trainingData;
+
 #if 0
-    auto trainingData = generateDataset(datasetSize);
+    generateDataset(trainingData, datasetSize);
     saveDataset(trainingData);
 #else
-    auto trainingData = loadDataset(datasetSize);
+    loadDataset(trainingData, datasetSize);
 #endif
 
     FeatureDetector detector;
-
     for (int e=0; e<nEpochs; ++e) {
-        auto t1 = std::chrono::high_resolution_clock::now();
+        generateDataset(trainingData, trainingImages, datasetSize);
 
+        Eigen::internal::set_is_malloc_allowed(false); // safeguard for detecting unwanted allocations during training
+
+        auto t1 = std::chrono::high_resolution_clock::now();
         double trainingLoss = 0.0;
         for (int i=0; i<batchesInEpoch; ++i) {
             auto batch = sampleTrainingBatch(trainingData, trainingDatasetSize, batchSize);
             trainingLoss += detector.trainBatch(batch);
         }
-
         auto t2 = std::chrono::high_resolution_clock::now();
 
         double evaluationLoss = 0.0;
@@ -229,6 +235,8 @@ void trainFeatureDetector()
             l *= l;
             evaluationLoss += l;
         }
+
+        Eigen::internal::set_is_malloc_allowed(true);
 
         printf("Epoch %d finished, trainingLoss: %13.10f, evaluationLoss: %13.10f, time: %ld\n",
             e, trainingLoss/batchesInEpoch, evaluationLoss/evaluationDatasetSize,
