@@ -199,7 +199,7 @@ void trainFeatureDetector()
     constexpr int datasetSize = 1024;
     constexpr int trainingDatasetSize = (datasetSize/8)*7;
     constexpr int evaluationDatasetSize = datasetSize/8;
-    constexpr int batchSize = 32;
+    constexpr int batchSize = 64;
     constexpr int batchesInEpoch = trainingDatasetSize / batchSize;
     constexpr int nEpochs = 100000;
 
