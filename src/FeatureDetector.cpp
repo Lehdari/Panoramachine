@@ -37,17 +37,18 @@ double FeatureDetector::trainBatch(const TrainingBatch& batch)
     loss /= n;
 
     constexpr float learningRate = 0.0001f;
-    _layer1a.getOptimizer()->applyGradients<float>(learningRate);
-    _layer2a.getOptimizer()->applyGradients<float>(learningRate);
-    _layer3a.getOptimizer()->applyGradients<float>(learningRate);
-    _layer4a.getOptimizer()->applyGradients<float>(learningRate);
-    _layer5a.getOptimizer()->applyGradients<float>(learningRate);
-    _layer6a.getOptimizer()->applyGradients<float>(learningRate);
-    _layer7a.getOptimizer()->applyGradients<float>(learningRate);
-    _layer8a.getOptimizer()->applyGradients<float>(learningRate);
-    _layer9a.getOptimizer()->applyGradients<float>(learningRate);
-    _layer10a.getOptimizer()->applyGradients<float>(learningRate);
-    _layer11.getOptimizer()->applyGradients<float>(learningRate);
+    constexpr float momentum = 0.99f;
+    _layer1a.getOptimizer()->applyGradients<float>(learningRate, momentum);
+    _layer2a.getOptimizer()->applyGradients<float>(learningRate, momentum);
+    _layer3a.getOptimizer()->applyGradients<float>(learningRate, momentum);
+    _layer4a.getOptimizer()->applyGradients<float>(learningRate, momentum);
+    _layer5a.getOptimizer()->applyGradients<float>(learningRate, momentum);
+    _layer6a.getOptimizer()->applyGradients<float>(learningRate, momentum);
+    _layer7a.getOptimizer()->applyGradients<float>(learningRate, momentum);
+    _layer8a.getOptimizer()->applyGradients<float>(learningRate, momentum);
+    _layer9a.getOptimizer()->applyGradients<float>(learningRate, momentum);
+    _layer10a.getOptimizer()->applyGradients<float>(learningRate, momentum);
+    _layer11.getOptimizer()->applyGradients<float>(learningRate, momentum);
     // no need to call for b-layers since the weights are shared
 
     return loss;
