@@ -90,7 +90,7 @@ TrainingEntry makeTrainingEntry(const TrainingImages& trainingImages, float simi
     return { Feature(*img1, p1, 2.0f), Feature(*img2, p2, 2.0f), std::clamp(similarity*2.0f-1.0f, -0.999f, 0.999f) };
 }
 
-TrainingData generateTrainingDataset(int trainingDataSize)
+TrainingData generateDataset(int datasetSize)
 {
     DistortSettings minSettings{
         10, 15,
@@ -123,8 +123,8 @@ TrainingData generateTrainingDataset(int trainingDataSize)
     std::default_random_engine rnd(1507715517);
 
     TrainingData trainingData;
-    trainingData.reserve(trainingDataSize);
-    for (int i=0; i<trainingDataSize; ++i) {
+    trainingData.reserve(datasetSize);
+    for (int i=0; i<datasetSize; ++i) {
         float similarity = rnd()%2 == 0 ? 0.0f : 0.5f+RND*0.5f;
         trainingData.emplace_back(makeTrainingEntry(images, similarity));
 
@@ -138,7 +138,7 @@ TrainingData generateTrainingDataset(int trainingDataSize)
     return trainingData;
 }
 
-void saveTrainingDataset(const TrainingData& data)
+void saveDataset(const TrainingData& data)
 {
     for (int i=0; i<data.size(); ++i) {
         std::stringstream filename1, filename2, filenameSimilarity;
@@ -156,11 +156,11 @@ void saveTrainingDataset(const TrainingData& data)
     }
 }
 
-TrainingData loadTrainingDataset(int trainingDataSize)
+TrainingData loadDataset(int datasetSize)
 {
     TrainingData trainingData;
-    trainingData.reserve(trainingDataSize);
-    for (int i=0; i<trainingDataSize; ++i) {
+    trainingData.reserve(datasetSize);
+    for (int i=0; i<datasetSize; ++i) {
         trainingData.emplace_back();
         std::stringstream filename1, filename2, filenameSimilarity;
         filename1 << "temp/feature_" << std::setfill('0') << std::setw(4) << i << "_f1.bin";
@@ -178,7 +178,7 @@ TrainingData loadTrainingDataset(int trainingDataSize)
     return trainingData;
 }
 
-TrainingBatch sampleTrainingBatch(const TrainingData& data, int batchSize)
+TrainingBatch sampleTrainingBatch(const TrainingData& data, int trainingDatasetSize, int batchSize)
 {
     TrainingBatch batch;
     batch.reserve(batchSize);
@@ -187,7 +187,7 @@ TrainingBatch sampleTrainingBatch(const TrainingData& data, int batchSize)
     for (int i=0; i<batchSize; ++i) {
         batch.push_back(&data[p]);
 
-        if (++p >= data.size())
+        if (++p >= trainingDatasetSize)
             p=0;
     }
 
@@ -196,16 +196,18 @@ TrainingBatch sampleTrainingBatch(const TrainingData& data, int batchSize)
 
 void trainFeatureDetector()
 {
-    constexpr int trainingDataSize = 1024;
+    constexpr int datasetSize = 1024;
+    constexpr int trainingDatasetSize = (datasetSize/8)*7;
+    constexpr int evaluationDatasetSize = datasetSize/8;
     constexpr int batchSize = 32;
-    constexpr int batchesInEpoch = trainingDataSize / batchSize;
-    constexpr int nEpochs = 1024;
+    constexpr int batchesInEpoch = trainingDatasetSize / batchSize;
+    constexpr int nEpochs = 100000;
 
-#if 1
-    auto trainingData = generateTrainingDataset(trainingDataSize);
-    saveTrainingDataset(trainingData);
+#if 0
+    auto trainingData = generateDataset(datasetSize);
+    saveDataset(trainingData);
 #else
-    auto trainingData = loadTrainingDataset(trainingDataSize);
+    auto trainingData = loadDataset(datasetSize);
 #endif
 
     FeatureDetector detector;
@@ -213,15 +215,23 @@ void trainFeatureDetector()
     for (int e=0; e<nEpochs; ++e) {
         auto t1 = std::chrono::high_resolution_clock::now();
 
-        double loss = 0.0;
+        double trainingLoss = 0.0;
         for (int i=0; i<batchesInEpoch; ++i) {
-            auto batch = sampleTrainingBatch(trainingData, batchSize);
-            loss += detector.trainBatch(batch);
+            auto batch = sampleTrainingBatch(trainingData, trainingDatasetSize, batchSize);
+            trainingLoss += detector.trainBatch(batch);
         }
 
         auto t2 = std::chrono::high_resolution_clock::now();
 
-        printf("Epoch %d finished, loss: %0.10f, time: %ld\n", e, loss/batchesInEpoch,
+        double evaluationLoss = 0.0;
+        for (int i=trainingDatasetSize; i<datasetSize; ++i) {
+            double l = detector(trainingData[i].f1, trainingData[i].f2)-trainingData[i].similarity;
+            l *= l;
+            evaluationLoss += l;
+        }
+
+        printf("Epoch %d finished, trainingLoss: %13.10f, evaluationLoss: %13.10f, time: %ld\n",
+            e, trainingLoss/batchesInEpoch, evaluationLoss/evaluationDatasetSize,
             std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
     }
 }
