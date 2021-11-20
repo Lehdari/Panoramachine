@@ -92,7 +92,11 @@ struct OptimizerAdam
     }
 
     template <typename T_Scalar>
-    inline void applyGradients(T_Scalar learningRate = 0.001, T_Scalar momentum = 0.9, T_Scalar momentum2 = 0.999)
+    inline void applyGradients(
+        T_Scalar learningRate = 0.001,
+        T_Scalar momentum = 0.9,
+        T_Scalar momentum2 = 0.999,
+        T_Scalar weightDecay = 0.01)
     {
         const T_Scalar epsilon = 1.0e-8;
         ++t;
@@ -104,6 +108,10 @@ struct OptimizerAdam
             (1.0 - std::pow(momentum, (T_Scalar)t)));
 
         w -= alpha * wm.template cwiseProduct((wv.cwiseSqrt()+T_Weights::Ones()*epsilon).cwiseInverse());
+
+        if (weightDecay >= epsilon) // weight decay
+            w.noalias() = w*(1.0-weightDecay);
+
         wg = T_Weights::Zero();
     }
 
