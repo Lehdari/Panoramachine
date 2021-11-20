@@ -13,7 +13,7 @@
 
 
 #define EIGEN_DONT_PARALLELIZE
-#define EIGEN_NO_MALLOC
+#define EIGEN_RUNTIME_NO_MALLOC
 
 
 #include <Eigen/Dense>
