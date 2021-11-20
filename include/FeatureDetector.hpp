@@ -22,6 +22,7 @@ public:
 
     double trainBatch(const TrainingBatch& batch);
 
+    float operator()(const Feature& f1, const Feature& f2);
 
 private:
     using Layer1 = LayerMerge<float, ActivationReLU, OptimizerAdam, Feature::fsa*6, Feature::fsr, 64>;
