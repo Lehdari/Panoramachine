@@ -12,6 +12,9 @@
 #define GRAPHICSUTILS_MATHTYPES_HPP
 
 
+#define EIGEN_NO_MALLOC
+
+
 #include <Eigen/Dense>
 #include <cstdint>
 
