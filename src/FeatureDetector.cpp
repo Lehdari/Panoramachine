@@ -21,8 +21,7 @@ FeatureDetector::FeatureDetector() :
     _layer7a(0.1f, ActivationReLU(0.01f)), _layer7b(ActivationReLU(0.01f), _layer7a.getOptimizerPtr()),
     _layer8a(0.1f, ActivationReLU(0.01f)), _layer8b(ActivationReLU(0.01f), _layer8a.getOptimizerPtr()),
     _layer9a(0.1f, ActivationReLU(0.01f)), _layer9b(ActivationReLU(0.01f), _layer9a.getOptimizerPtr()),
-    _layer10a(0.1f, ActivationTanh()), _layer10b(ActivationTanh(), _layer10a.getOptimizerPtr()),
-    _layer11(0.1f)
+    _layer10a(0.1f, ActivationTanh()), _layer10b(ActivationTanh(), _layer10a.getOptimizerPtr())
 {
 }
 
@@ -31,24 +30,25 @@ double FeatureDetector::trainBatch(const TrainingBatch& batch)
     int n=0;
     double loss = 0.0;
     for (auto* entry : batch) {
-        loss += trainingPass(entry->f1, entry->f2, entry->similarity);
+        loss += trainingPass(entry->f1, entry->f2, entry->diff);
         ++n;
     }
     loss /= n;
 
-    constexpr float learningRate = 0.0001f;
+    constexpr float learningRate = 0.001f;
     constexpr float momentum = 0.99f;
-    _layer1a.getOptimizer()->applyGradients<float>(learningRate, momentum);
-    _layer2a.getOptimizer()->applyGradients<float>(learningRate, momentum);
-    _layer3a.getOptimizer()->applyGradients<float>(learningRate, momentum);
-    _layer4a.getOptimizer()->applyGradients<float>(learningRate, momentum);
-    _layer5a.getOptimizer()->applyGradients<float>(learningRate, momentum);
-    _layer6a.getOptimizer()->applyGradients<float>(learningRate, momentum);
-    _layer7a.getOptimizer()->applyGradients<float>(learningRate, momentum);
-    _layer8a.getOptimizer()->applyGradients<float>(learningRate, momentum);
-    _layer9a.getOptimizer()->applyGradients<float>(learningRate, momentum);
-    _layer10a.getOptimizer()->applyGradients<float>(learningRate, momentum);
-    _layer11.getOptimizer()->applyGradients<float>(learningRate, momentum);
+    constexpr float momentum2 = 0.999f;
+    constexpr float weightDecay = 0.01f;
+    _layer1a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer2a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer3a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer4a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer5a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer6a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer7a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer8a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer9a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer10a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
     // no need to call for b-layers since the weights are shared
 
     return loss;
@@ -56,25 +56,24 @@ double FeatureDetector::trainBatch(const TrainingBatch& batch)
 
 float FeatureDetector::operator()(const Feature& f1, const Feature& f2)
 {
-    Layer10::Output v1 = _layer10a(_layer9a(_layer8a(_layer7a(_layer6a(_layer5a(_layer4a(_layer3a(_layer2a(_layer1a(f1.polar))))))))));
-    Layer10::Output v2 = _layer10b(_layer9b(_layer8b(_layer7b(_layer6b(_layer5b(_layer4b(_layer3b(_layer2b(_layer1b(f2.polar))))))))));
-    Layer10::Output v3 = v1-v2;
-    return _layer11(v3)(0,0);
+    _v1 = _layer10a(_layer9a(_layer8a(_layer7a(_layer6a(_layer5a(_layer4a(_layer3a(_layer2a(_layer1a(f1.polar))))))))));
+    _v2 = _layer10b(_layer9b(_layer8b(_layer7b(_layer6b(_layer5b(_layer4b(_layer3b(_layer2b(_layer1b(f2.polar))))))))));
+    _diff = _v1-_v2;
+    return _diff.norm();
 }
 
-float FeatureDetector::trainingPass(const Feature& f1, const Feature& f2, float targetSimilarity)
+float FeatureDetector::trainingPass(const Feature& f1, const Feature& f2, float targetDiff)
 {
     // forward propagate
-    float similarityPrediction = operator()(f1, f2);
+    float diffPrediction = operator()(f1, f2);
 
     // loss
-    float loss = similarityPrediction - targetSimilarity;
+    float loss = diffPrediction - targetDiff;
     loss *= loss;
 
     // backpropagate
-    Layer11::Output g;
-    g << similarityPrediction - targetSimilarity; // initial loss gradient
-    auto l11g = _layer11.backpropagate(g); // gradient after the layer 11
+    constexpr float epsilon = 1.0e-8f; // epsilon to prevent division by zero
+    Layer10::Output g = ((diffPrediction - targetDiff)*_diff)/(diffPrediction+epsilon); // initial gradient over distance function
 
     _layer1a.backpropagate(
     _layer2a.backpropagate(
@@ -85,7 +84,7 @@ float FeatureDetector::trainingPass(const Feature& f1, const Feature& f2, float 
     _layer7a.backpropagate(
     _layer8a.backpropagate(
     _layer9a.backpropagate(
-    _layer10a.backpropagate(l11g))))))))));
+    _layer10a.backpropagate(g))))))))));
 
     _layer1b.backpropagate(
     _layer2b.backpropagate(
@@ -96,7 +95,7 @@ float FeatureDetector::trainingPass(const Feature& f1, const Feature& f2, float 
     _layer7b.backpropagate(
     _layer8b.backpropagate(
     _layer9b.backpropagate(
-    _layer10b.backpropagate(-l11g)))))))))); // apply negative gradient to b branch (negated to form v3)
+    _layer10b.backpropagate(-g)))))))))); // apply negative gradient to b branch (negated to form diff)
 
     return loss;
 }

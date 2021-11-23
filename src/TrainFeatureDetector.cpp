@@ -87,7 +87,7 @@ TrainingEntry makeTrainingEntry(const TrainingImages& trainingImages, float simi
         p2 += ddir*entrySimilarityDistance(similarity);
     }
 
-    return { Feature(*img1, p1, 2.0f), Feature(*img2, p2, 2.0f), std::clamp(similarity*2.0f-1.0f, -0.999f, 0.999f) };
+    return { Feature(*img1, p1, 2.0f), Feature(*img2, p2, 2.0f), 1.0f-similarity };
 }
 
 void generateTrainingImages(TrainingImages& trainingImages)
@@ -152,7 +152,7 @@ void saveDataset(const TrainingData& data)
 
         std::ofstream similarityFile;
         similarityFile.open(filenameSimilarity.str());
-        similarityFile << data[i].similarity << std::endl;
+        similarityFile << data[i].diff << std::endl;
         similarityFile.close();
     }
 }
@@ -173,7 +173,7 @@ void loadDataset(TrainingData& trainingData, int datasetSize)
 
         std::ifstream similarityFile;
         similarityFile.open(filenameSimilarity.str());
-        similarityFile >> trainingData.back().similarity;
+        similarityFile >> trainingData.back().diff;
         similarityFile.close();
     }
 }
@@ -199,7 +199,7 @@ void trainFeatureDetector()
     constexpr int datasetSize = 2048;
     constexpr int trainingDatasetSize = (datasetSize/8)*7;
     constexpr int evaluationDatasetSize = datasetSize/8;
-    constexpr int batchSize = 64;
+    constexpr int batchSize = datasetSize/8;
     constexpr int batchesInEpoch = trainingDatasetSize / batchSize;
     constexpr int nEpochs = 100000;
 
@@ -207,13 +207,6 @@ void trainFeatureDetector()
     generateTrainingImages(trainingImages);
 
     TrainingData trainingData;
-
-#if 0
-    generateDataset(trainingData, datasetSize);
-    saveDataset(trainingData);
-#else
-    loadDataset(trainingData, datasetSize);
-#endif
 
     FeatureDetector detector;
     for (int e=0; e<nEpochs; ++e) {
@@ -231,7 +224,7 @@ void trainFeatureDetector()
 
         double evaluationLoss = 0.0;
         for (int i=trainingDatasetSize; i<datasetSize; ++i) {
-            double l = detector(trainingData[i].f1, trainingData[i].f2)-trainingData[i].similarity;
+            double l = detector(trainingData[i].f1, trainingData[i].f2)-trainingData[i].diff;
             l *= l;
             evaluationLoss += l;
         }

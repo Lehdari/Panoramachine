@@ -39,7 +39,7 @@ using TrainingImages = std::vector<TrainingImage>;
 struct TrainingEntry {
     Feature f1;
     Feature f2;
-    float   similarity;
+    float   diff;
 };
 
 using TrainingData = std::vector<TrainingEntry>;

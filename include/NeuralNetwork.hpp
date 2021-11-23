@@ -215,10 +215,8 @@ public:
 
     inline Output operator()(const Input& x)
     {
-        _input.template block<T_InputRows,T_InputCols/2>(0,0) =
-            x.template block<T_InputRows,T_InputCols/2>(0,0);
-        _input.template block<T_InputRows,T_InputCols/2>(T_InputRows,0) =
-            x.template block<T_InputRows,T_InputCols/2>(0,T_InputCols/2);
+        _input.template block<2*T_InputRows,T_InputCols/2>(0,0) =
+            Eigen::Map<const Eigen::Matrix<T_Scalar, 2*T_InputRows, T_InputCols/2>>(x.data());
         _weighed = _optimizer->w * _input;
         return _activation.activation(_weighed);
     }
@@ -227,11 +225,9 @@ public:
     {
         Output ag = _activation.gradient(_weighed).cwiseProduct(g);
         _optimizer->wg += ag * _input.transpose();
-        auto igModified = _optimizer->w.template block<T_OutputRows, 2*T_InputRows>(0,0).transpose() * ag;
-        Input ig;
-        ig <<
-            igModified.template block<T_InputRows, T_InputCols/2>(0,0),
-            igModified.template block<T_InputRows, T_InputCols/2>(T_InputRows,0);
+        Eigen::Matrix<T_Scalar, 2*T_InputRows, T_InputCols/2> igModified =
+            _optimizer->w.template block<T_OutputRows, 2*T_InputRows>(0,0).transpose() * ag;
+        Input ig = Eigen::Map<Eigen::Matrix<T_Scalar, T_InputRows,T_InputCols>>(igModified.data());
         return ig;
     }
 
