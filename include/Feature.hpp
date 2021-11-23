@@ -23,6 +23,7 @@ struct Feature {
     static constexpr float frm = 1.1387886347566f; // feature radius multiplier
 
     Eigen::Matrix<float, fsa*6, fsr>    polar;
+    double                              energy;
 
     Feature();
     Feature(const cv::Mat& img, const Vec2f& p, float firstRadius);

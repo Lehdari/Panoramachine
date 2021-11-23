@@ -15,7 +15,8 @@
 
 
 Feature::Feature() :
-    polar   (Eigen::Matrix<float, fsa*6, fsr>::Zero())
+    polar   (Eigen::Matrix<float, fsa*6, fsr>::Zero()),
+    energy  (0.0)
 {
 }
 
@@ -30,6 +31,12 @@ Feature::Feature(const cv::Mat& img, const Vec2f& p, float firstRadius)
             r *= Feature::frm;
         }
     }
+
+    float avg = polar.block<fsa*3, fsr>(0,0).sum() / (fsa*3*fsr);
+    polar.block<fsa*3, fsr>(0,0).noalias() -= avg * Eigen::Matrix<float, fsa*3, fsr>::Ones();
+    energy = std::sqrt((double)polar.block<fsa*3, fsr>(0,0).array().square().sum() / (fsa*3*fsr));
+    float sdInv = 1.0f / energy;
+    polar.block<fsa*3, fsr>(0,0) *= sdInv;
 
     for (int i=0; i<Feature::fsr; ++i) {
         polar.block<Feature::fsa*3, 1>(fsa*3, i) =
