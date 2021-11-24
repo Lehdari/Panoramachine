@@ -53,12 +53,29 @@ inline __attribute__((always_inline)) float entrySimilarityDistance(float simila
     return similarity > 0.9f ? (1.0f-similarity)*20.0f : 2.0f*std::pow(Feature::frm, (1.0f-similarity)*50.0f);
 }
 
-TrainingEntry makeTrainingEntry(const TrainingImages& trainingImages, float similarity)
+Feature sampleMaxEnergy(const cv::Mat& img, int nSamples, Vec2f& p, std::default_random_engine& rnd)
 {
-    static std::default_random_engine rnd(1507715517);
+    Feature f;
+    for (int i=0; i<nSamples; ++i)
+    {
+        Vec2f p2(RND*img.cols, RND*img.rows);
+        Feature f2(img, p2, 2.0f);
+        if (f2.energy > f.energy) {
+            std::swap(f, f2);
+            p = p2;
+        }
+    }
+    return f;
+}
 
+TrainingEntry makeTrainingEntry(
+    const TrainingImages& trainingImages,
+    float similarity,
+    std::default_random_engine& rnd)
+{
     const cv::Mat* img1(nullptr);
     const cv::Mat* img2(nullptr);
+    Feature f1, f2;
     Vec2f p1, p2;
 
     if (similarity < 1.0e-8f) {
@@ -70,8 +87,9 @@ TrainingEntry makeTrainingEntry(const TrainingImages& trainingImages, float simi
 
         img1 = &trainingImages[imgId1].original;
         img2 = &trainingImages[imgId2].original;
-        p1 << RND*img1->cols, RND*img1->rows;
-        p2 << RND*img2->cols, RND*img2->rows;
+
+        f1 = sampleMaxEnergy(*img1, 10, p1, rnd);
+        f2 = sampleMaxEnergy(*img2, 10, p2, rnd);
     }
     else {
         // pick sample from an original image and random respective distorted one
@@ -79,15 +97,16 @@ TrainingEntry makeTrainingEntry(const TrainingImages& trainingImages, float simi
         img1 = &trainingImages[imgId1].original;
         int imgId2 = rnd()%trainingImages[imgId1].distorted.size();
         img2 = &trainingImages[imgId1].distorted[imgId2].distorted;
-        p1 << RND*img1->cols, RND*img1->rows;
+        f1 = sampleMaxEnergy(*img1, 10, p1, rnd);
         p2 = p1 + trainingImages[imgId1].distorted[imgId2].forwardMap.at<Vec2f>((int)p1(1), (int)p1(0));
 
         float angle = 2.0f*M_PI*RND;
         Vec2f ddir(std::cos(angle), std::sin(angle));
         p2 += ddir*entrySimilarityDistance(similarity);
+        f2 = Feature(*img2, p2, 2.0f);
     }
 
-    return { Feature(*img1, p1, 2.0f), Feature(*img2, p2, 2.0f), 1.0f-similarity };
+    return { std::move(f1), std::move(f2), 1.0f-similarity };
 }
 
 void generateTrainingImages(TrainingImages& trainingImages)
@@ -123,17 +142,19 @@ void generateTrainingImages(TrainingImages& trainingImages)
 
 void generateDataset(TrainingData& trainingData, const TrainingImages& trainingImages, int datasetSize)
 {
-    static std::default_random_engine rnd(1507715517);
-
     trainingData.clear();
-    trainingData.reserve(datasetSize);
+    trainingData.resize(datasetSize);
+
+    #pragma omp parallel for
     for (int i=0; i<datasetSize; ++i) {
+        std::default_random_engine rnd(i);
         float similarity = rnd()%2 == 0 ? 0.0f : 0.5f+RND*0.5f;
-        trainingData.emplace_back(makeTrainingEntry(trainingImages, similarity));
+        trainingData[i] = makeTrainingEntry(trainingImages, similarity, rnd);
 
 #if 0
         visualizeFeature(trainingData.back().f1, "f1");
         visualizeFeature(trainingData.back().f2, "f2");
+        printf("diff: %0.5f\n", trainingData.back().diff);
         cv::waitKey(0);
 #endif
     }
