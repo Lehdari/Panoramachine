@@ -50,6 +50,7 @@ private:
     Layer10::Output _v1;
     Layer10::Output _v2; // feature vectors from a and b branches
     Layer10::Output _diff; // v1-v2
+    Layer10::Output _g;
 
     float trainingPass(const Feature& f1, const Feature& f2, float targetDiff);
 };

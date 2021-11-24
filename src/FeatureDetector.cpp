@@ -69,33 +69,36 @@ float FeatureDetector::trainingPass(const Feature& f1, const Feature& f2, float 
 
     // loss
     float loss = diffPrediction - targetDiff;
-    loss *= loss;
+    if (targetDiff > 0.9 && loss > 0.0)
+        loss = 0.0;
+    else {
 
-    // backpropagate
-    constexpr float epsilon = 1.0e-8f; // epsilon to prevent division by zero
-    Layer10::Output g = ((diffPrediction - targetDiff)*_diff)/(diffPrediction+epsilon); // initial gradient over distance function
+        // backpropagate
+        constexpr float epsilon = 1.0e-8f; // epsilon to prevent division by zero
+        _g = (loss*_diff)/(diffPrediction+epsilon); // initial gradient over distance function
 
-    _layer1a.backpropagate(
-    _layer2a.backpropagate(
-    _layer3a.backpropagate(
-    _layer4a.backpropagate(
-    _layer5a.backpropagate(
-    _layer6a.backpropagate(
-    _layer7a.backpropagate(
-    _layer8a.backpropagate(
-    _layer9a.backpropagate(
-    _layer10a.backpropagate(g))))))))));
+        _layer1a.backpropagate(
+        _layer2a.backpropagate(
+        _layer3a.backpropagate(
+        _layer4a.backpropagate(
+        _layer5a.backpropagate(
+        _layer6a.backpropagate(
+        _layer7a.backpropagate(
+        _layer8a.backpropagate(
+        _layer9a.backpropagate(
+        _layer10a.backpropagate(_g))))))))));
 
-    _layer1b.backpropagate(
-    _layer2b.backpropagate(
-    _layer3b.backpropagate(
-    _layer4b.backpropagate(
-    _layer5b.backpropagate(
-    _layer6b.backpropagate(
-    _layer7b.backpropagate(
-    _layer8b.backpropagate(
-    _layer9b.backpropagate(
-    _layer10b.backpropagate(-g)))))))))); // apply negative gradient to b branch (negated to form diff)
+        _layer1b.backpropagate(
+        _layer2b.backpropagate(
+        _layer3b.backpropagate(
+        _layer4b.backpropagate(
+        _layer5b.backpropagate(
+        _layer6b.backpropagate(
+        _layer7b.backpropagate(
+        _layer8b.backpropagate(
+        _layer9b.backpropagate(
+        _layer10b.backpropagate(-_g)))))))))); // apply negative gradient to b branch (negated to form diff)
+    }
 
-    return loss;
+    return loss*loss;
 }

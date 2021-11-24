@@ -246,6 +246,8 @@ void trainFeatureDetector()
         double evaluationLoss = 0.0;
         for (int i=trainingDatasetSize; i<datasetSize; ++i) {
             double l = detector(trainingData[i].f1, trainingData[i].f2)-trainingData[i].diff;
+            if (trainingData[i].diff > 0.9f && l > 0.0f)
+                l = 0.0f;
             l *= l;
             evaluationLoss += l;
         }
