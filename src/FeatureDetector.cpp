@@ -38,7 +38,7 @@ double FeatureDetector::trainBatch(const TrainingBatch& batch)
     constexpr float learningRate = 0.001f;
     constexpr float momentum = 0.99f;
     constexpr float momentum2 = 0.999f;
-    constexpr float weightDecay = 0.01f;
+    constexpr float weightDecay = 0.05f;
     _layer1a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
     _layer2a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
     _layer3a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
