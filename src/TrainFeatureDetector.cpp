@@ -110,13 +110,20 @@ TrainingEntry makeTrainingEntry(
         }
     }
     else {
-        // pick sample from an original image and random respective distorted one
+        // pick samples from same location of the same image (original or distorted)
         int imgId1 = rnd()%trainingImages.size();
-        img1 = &trainingImages[imgId1].original;
-        int imgId2 = rnd()%trainingImages[imgId1].distorted.size();
-        img2 = &trainingImages[imgId1].distorted[imgId2].distorted;
+        int imgSubId1 = rnd()%(trainingImages[imgId1].distorted.size()+1); // 0 for original image
+        int imgSubId2 = rnd()%(trainingImages[imgId1].distorted.size());
+        if (imgSubId1 == 0)
+            img1 = &trainingImages[imgId1].original;
+        else
+            img1 = &trainingImages[imgId1].distorted[imgSubId1-1].distorted;
+        img2 = &trainingImages[imgId1].distorted[imgSubId2].distorted;
+
         f1 = sampleMaxEnergy(*img1, 10, p1, rnd);
-        p2 = p1 + trainingImages[imgId1].distorted[imgId2].forwardMap.at<Vec2f>((int)p1(1), (int)p1(0));
+        if (imgSubId1 > 0)
+            p1 += trainingImages[imgId1].distorted[imgSubId2].backwardMap.at<Vec2f>((int) p1(1), (int) p1(0));
+        p2 = p1 + trainingImages[imgId1].distorted[imgSubId2].forwardMap.at<Vec2f>((int)p1(1), (int)p1(0));
 
         float angle = 2.0f*M_PI*RND;
         Vec2f ddir(std::cos(angle), std::sin(angle));
