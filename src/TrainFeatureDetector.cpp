@@ -82,14 +82,27 @@ TrainingEntry makeTrainingEntry(
         // pick two samples from differing images
         int imgId1 = rnd()%trainingImages.size();
         int imgId2 = rnd()%trainingImages.size();
-        while (imgId1 == imgId2)
-            imgId2 = rnd()%trainingImages.size();
-
-        img1 = &trainingImages[imgId1].original;
-        img2 = &trainingImages[imgId2].original;
+        int imgSubId1 = rnd()%(trainingImages[imgId1].distorted.size()+1); // 0 for original image
+        int imgSubId2 = rnd()%(trainingImages[imgId2].distorted.size()+1);
+        if (imgSubId1 == 0)
+            img1 = &trainingImages[imgId1].original;
+        else
+            img1 = &trainingImages[imgId1].distorted[imgSubId1-1].distorted;
+        if (imgSubId2 == 0)
+            img2 = &trainingImages[imgId2].original;
+        else
+            img2 = &trainingImages[imgId2].distorted[imgSubId2-1].distorted;
 
         f1 = sampleMaxEnergy(*img1, 10, p1, rnd);
         f2 = sampleMaxEnergy(*img2, 10, p2, rnd);
+
+        // in case of the same image, sample so long that sufficient in-between distance has been reached
+        if (imgId1 == imgId2) {
+            while ((p1-p2).norm() < 2.0f*std::pow(Feature::frm, Feature::fsa)) {
+                f1 = sampleMaxEnergy(*img1, 10, p1, rnd);
+                f2 = sampleMaxEnergy(*img2, 10, p2, rnd);
+            }
+        }
     }
     else {
         // pick sample from an original image and random respective distorted one
