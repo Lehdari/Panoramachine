@@ -32,10 +32,15 @@ TrainingImage::TrainingImage(cv::Mat&& image,
 
     distorted.reserve(nDistorted);
 
+    // apply more transforms for images with more area
+    double nTransformsMultiplier = (original.rows*original.cols) / (1024.0*1024.0);
+
     for (int i=0; i<nDistorted; ++i) {
         DistortSettings settings {
-            RANGE(minSettings.nMinTransforms, maxSettings.nMinTransforms),
-            RANGE(minSettings.nMaxTransforms, maxSettings.nMaxTransforms),
+            RANGE((int)(minSettings.nMinTransforms*nTransformsMultiplier),
+                (int)(maxSettings.nMinTransforms*nTransformsMultiplier)),
+            RANGE((int)(minSettings.nMaxTransforms*nTransformsMultiplier),
+                (int)(maxSettings.nMaxTransforms*nTransformsMultiplier)),
             RANGE(minSettings.minDistance, maxSettings.minDistance),
             RANGE(minSettings.maxDistance, maxSettings.maxDistance),
             RANGE(minSettings.maxRotation, maxSettings.maxRotation),
