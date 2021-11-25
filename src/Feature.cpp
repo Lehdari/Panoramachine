@@ -49,6 +49,7 @@ Feature::Feature(const cv::Mat& img, const Vec2f& p, float firstRadius)
 void visualizeFeature(Feature& feature, const std::string& windowName)
 {
     cv::Mat featureImg(Feature::fsr, Feature::fsa*2, CV_32FC3);
-    featureImg.data = reinterpret_cast<unsigned char*>(feature.polar.data());
+    decltype(feature.polar) polarNormalized = feature.polar*0.5f + 0.5f*decltype(feature.polar)::Ones();
+    featureImg.data = reinterpret_cast<unsigned char*>(polarNormalized.data());
     cv::imshow(windowName, featureImg);
 }
