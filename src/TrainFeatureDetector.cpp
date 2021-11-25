@@ -192,9 +192,9 @@ void saveDataset(const TrainingData& data)
 {
     for (int i=0; i<data.size(); ++i) {
         std::stringstream filename1, filename2, filenameSimilarity;
-        filename1 << "temp/feature_" << std::setfill('0') << std::setw(4) << i << "_f1.bin";
-        filename2 << "temp/feature_" << std::setfill('0') << std::setw(4) << i << "_f2.bin";
-        filenameSimilarity << "temp/feature_" << std::setfill('0') << std::setw(4) << i << "_similarity.txt";
+        filename1 << "../temp/feature_" << std::setfill('0') << std::setw(4) << i << "_f1.bin";
+        filename2 << "../temp/feature_" << std::setfill('0') << std::setw(4) << i << "_f2.bin";
+        filenameSimilarity << "../temp/feature_" << std::setfill('0') << std::setw(4) << i << "_similarity.txt";
 
         writeMatrixBinary(filename1.str(), data[i].f1.polar);
         writeMatrixBinary(filename2.str(), data[i].f2.polar);
@@ -213,9 +213,9 @@ void loadDataset(TrainingData& trainingData, int datasetSize)
     for (int i=0; i<datasetSize; ++i) {
         trainingData.emplace_back();
         std::stringstream filename1, filename2, filenameSimilarity;
-        filename1 << "temp/feature_" << std::setfill('0') << std::setw(4) << i << "_f1.bin";
-        filename2 << "temp/feature_" << std::setfill('0') << std::setw(4) << i << "_f2.bin";
-        filenameSimilarity << "temp/feature_" << std::setfill('0') << std::setw(4) << i << "_similarity.txt";
+        filename1 << "../temp/feature_" << std::setfill('0') << std::setw(4) << i << "_f1.bin";
+        filename2 << "../temp/feature_" << std::setfill('0') << std::setw(4) << i << "_f2.bin";
+        filenameSimilarity << "../temp/feature_" << std::setfill('0') << std::setw(4) << i << "_similarity.txt";
 
         readMatrixBinary(filename1.str(), trainingData.back().f1.polar);
         readMatrixBinary(filename2.str(), trainingData.back().f2.polar);
