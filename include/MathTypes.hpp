@@ -14,6 +14,7 @@
 
 #define EIGEN_DONT_PARALLELIZE
 #define EIGEN_RUNTIME_NO_MALLOC
+#define EIGEN_STACK_ALLOCATION_LIMIT 0
 
 
 #include <Eigen/Dense>
