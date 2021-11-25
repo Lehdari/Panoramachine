@@ -152,9 +152,12 @@ void generateTrainingImages(TrainingImages& trainingImages)
         cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH), 2, minSettings, maxSettings);
 
 #if 0
-    cv::imshow("original", images[0].original);
-    cv::imshow("distorted1", images[0].distorted[0].distorted);
-    cv::imshow("distorted2", images[0].distorted[1].distorted);
+    for (auto& img : trainingImages) {
+        cv::imshow("original", img.original);
+        cv::imshow("distorted1", img.distorted[0].distorted);
+        cv::imshow("distorted2", img.distorted[1].distorted);
+        cv::waitKey(0);
+    }
 #endif
 }
 
@@ -170,9 +173,9 @@ void generateDataset(TrainingData& trainingData, const TrainingImages& trainingI
         trainingData[i] = makeTrainingEntry(trainingImages, similarity, rnd);
 
 #if 0
-        visualizeFeature(trainingData.back().f1, "f1");
-        visualizeFeature(trainingData.back().f2, "f2");
-        printf("diff: %0.5f\n", trainingData.back().diff);
+        visualizeFeature(trainingData[i].f1, "f1");
+        visualizeFeature(trainingData[i].f2, "f2");
+        printf("diff: %0.5f\n", trainingData[i].diff);
         cv::waitKey(0);
 #endif
     }
