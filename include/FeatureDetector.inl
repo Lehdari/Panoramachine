@@ -1,6 +1,6 @@
 //
 // Project: image_demorphing
-// File: FeatureDetector.cpp
+// File: FeatureDetector.inl
 //
 // Copyright (c) 2021 Miika 'Lehdari' Lehtimäki
 // You may use, distribute and modify this code under the terms
@@ -8,10 +8,9 @@
 // with this source code package.
 //
 
-#include "FeatureDetector.hpp"
 
-
-FeatureDetector::FeatureDetector() :
+template <template <typename> class T_Optimizer>
+FeatureDetector<T_Optimizer>::FeatureDetector() :
     _layer1a(0.1f, ActivationReLU(0.01f)), _layer1b(ActivationReLU(0.01f), _layer1a.getOptimizerPtr()),
     _layer2a(0.1f, ActivationReLU(0.01f)), _layer2b(ActivationReLU(0.01f), _layer2a.getOptimizerPtr()),
     _layer3a(0.1f, ActivationReLU(0.01f)), _layer3b(ActivationReLU(0.01f), _layer3a.getOptimizerPtr()),
@@ -23,7 +22,8 @@ FeatureDetector::FeatureDetector() :
 {
 }
 
-double FeatureDetector::trainBatch(const TrainingBatch& batch)
+template <template <typename> class T_Optimizer>
+double FeatureDetector<T_Optimizer>::trainBatch(const TrainingBatch& batch)
 {
     int n=0;
     double loss = 0.0;
@@ -37,20 +37,21 @@ double FeatureDetector::trainBatch(const TrainingBatch& batch)
     constexpr float momentum = 0.9f;
     constexpr float momentum2 = 0.999f;
     constexpr float weightDecay = 0.01f;
-    _layer1a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
-    _layer2a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
-    _layer3a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
-    _layer4a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
-    _layer5a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
-    _layer6a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
-    _layer7a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
-    _layer8a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer1a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer2a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer3a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer4a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer5a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer6a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer7a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer8a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
     // no need to call for b-layers since the weights are shared
 
     return loss;
 }
 
-float FeatureDetector::operator()(const Feature& f1, const Feature& f2)
+template <template <typename> class T_Optimizer>
+float FeatureDetector<T_Optimizer>::operator()(const Feature& f1, const Feature& f2)
 {
     _v1 = _layer8a(_layer7a(_layer6a(_layer5a(_layer4a(_layer3a(_layer2a(_layer1a(f1.polar))))))));
     _v2 = _layer8b(_layer7b(_layer6b(_layer5b(_layer4b(_layer3b(_layer2b(_layer1b(f2.polar))))))));
@@ -58,7 +59,8 @@ float FeatureDetector::operator()(const Feature& f1, const Feature& f2)
     return _diff.norm();
 }
 
-float FeatureDetector::trainingPass(const Feature& f1, const Feature& f2, float targetDiff)
+template <template <typename> class T_Optimizer>
+float FeatureDetector<T_Optimizer>::trainingPass(const Feature& f1, const Feature& f2, float targetDiff)
 {
     // forward propagate
     float diffPrediction = operator()(f1, f2);

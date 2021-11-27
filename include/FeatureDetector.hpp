@@ -16,6 +16,7 @@
 #include "NeuralNetwork.hpp"
 
 
+template <template <typename> class T_Optimizer>
 class FeatureDetector {
 public:
     FeatureDetector();
@@ -25,14 +26,14 @@ public:
     float operator()(const Feature& f1, const Feature& f2);
 
 private:
-    using Layer1 = LayerMerge<float, ActivationReLU, OptimizerAdam, Feature::fsa*6, Feature::fsr, 64>;
-    using Layer2 = LayerMerge<float, ActivationReLU, OptimizerAdam, 64, Feature::fsr/2, 64>;
-    using Layer3 = LayerMerge<float, ActivationReLU, OptimizerAdam, 64, Feature::fsr/4, 64>;
-    using Layer4 = LayerMerge<float, ActivationReLU, OptimizerAdam, 64, Feature::fsr/8, 64>;
-    using Layer5 = LayerMerge<float, ActivationReLU, OptimizerAdam, 64, Feature::fsr/16, 64>;
-    using Layer6 = LayerMerge<float, ActivationReLU, OptimizerAdam, 64, Feature::fsr/32, 64>;
-    using Layer7 = LayerMerge<float, ActivationTanh, OptimizerAdam, 64, Feature::fsr/64, 64>;
-    using Layer8 = LayerDense<float, ActivationTanh, OptimizerAdam, 64, 64>;
+    using Layer1 = LayerMerge<float, ActivationReLU, T_Optimizer, Feature::fsa*6, Feature::fsr, 64>;
+    using Layer2 = LayerMerge<float, ActivationReLU, T_Optimizer, 64, Feature::fsr/2, 64>;
+    using Layer3 = LayerMerge<float, ActivationReLU, T_Optimizer, 64, Feature::fsr/4, 64>;
+    using Layer4 = LayerMerge<float, ActivationReLU, T_Optimizer, 64, Feature::fsr/8, 64>;
+    using Layer5 = LayerMerge<float, ActivationReLU, T_Optimizer, 64, Feature::fsr/16, 64>;
+    using Layer6 = LayerMerge<float, ActivationReLU, T_Optimizer, 64, Feature::fsr/32, 64>;
+    using Layer7 = LayerMerge<float, ActivationTanh, T_Optimizer, 64, Feature::fsr/64, 64>;
+    using Layer8 = LayerDense<float, ActivationTanh, T_Optimizer, 64, 64>;
 
     Layer1  _layer1a, _layer1b;
     Layer2  _layer2a, _layer2b;
@@ -43,13 +44,15 @@ private:
     Layer7  _layer7a, _layer7b;
     Layer8  _layer8a, _layer8b;
 
-    Layer8::Output _v1;
-    Layer8::Output _v2; // feature vectors from a and b branches
-    Layer8::Output _diff; // v1-v2
-    Layer8::Output _g;
+    typename Layer8::Output _v1;
+    typename Layer8::Output _v2; // feature vectors from a and b branches
+    typename Layer8::Output _diff; // v1-v2
+    typename Layer8::Output _g;
 
     float trainingPass(const Feature& f1, const Feature& f2, float targetDiff);
 };
+
+#include "FeatureDetector.inl"
 
 
 #endif //IMAGE_DEMORPHING_FEATUREDETECTOR_HPP

@@ -276,7 +276,7 @@ void trainFeatureDetector()
 
     TrainingData trainingData;
 
-    FeatureDetector detector;
+    FeatureDetector<OptimizerAdam> detector;
     for (int e=0; e<nEpochs; ++e) {
         generateDataset(trainingData, trainingImages, datasetSize);
 
