@@ -160,15 +160,28 @@ void generateTrainingImages(TrainingImages& trainingImages)
 
     trainingImages.clear();
     trainingImages.emplace_back(cv::imread(std::string(IMAGE_DEMORPHING_RES_DIR) + "mountains1.exr",
-        cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH), 2, minSettings, maxSettings);
+        cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH), 8, minSettings, maxSettings);
     trainingImages.emplace_back(cv::imread(std::string(IMAGE_DEMORPHING_RES_DIR) + "lenna.exr",
-        cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH), 2, minSettings, maxSettings);
-
+        cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH), 8, minSettings, maxSettings);
+#if 0
+    trainingImages.emplace_back(cv::imread(std::string(IMAGE_DEMORPHING_RES_DIR) + "city1.exr",
+        cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH), 8, minSettings, maxSettings);
+    trainingImages.emplace_back(cv::imread(std::string(IMAGE_DEMORPHING_RES_DIR) + "city2.exr",
+        cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH), 8, minSettings, maxSettings);
+    trainingImages.emplace_back(cv::imread(std::string(IMAGE_DEMORPHING_RES_DIR) + "forest1.exr",
+        cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH), 8, minSettings, maxSettings);
+#endif
 #if 0
     for (auto& img : trainingImages) {
         cv::imshow("original", img.original);
         cv::imshow("distorted1", img.distorted[0].distorted);
         cv::imshow("distorted2", img.distorted[1].distorted);
+        cv::imshow("distorted3", img.distorted[2].distorted);
+        cv::imshow("distorted4", img.distorted[3].distorted);
+        cv::imshow("distorted5", img.distorted[4].distorted);
+        cv::imshow("distorted6", img.distorted[5].distorted);
+        cv::imshow("distorted7", img.distorted[6].distorted);
+        cv::imshow("distorted8", img.distorted[7].distorted);
         cv::waitKey(0);
     }
 #endif
