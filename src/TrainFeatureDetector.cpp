@@ -145,17 +145,17 @@ void generateTrainingImages(TrainingImages& trainingImages)
     DistortSettings minSettings{
         10, 15,
         128.0, 256.0,
-        M_PI*0.0625,
-        0.6, 0.9,
-        Vec2d(32.0, 32.0)
+        M_PI*0.03125,
+        0.7, 1.1,
+        Vec2d(16.0, 16.0)
     };
 
     DistortSettings maxSettings{
         15, 25,
         256.0, 512.0,
-        M_PI*0.125,
+        M_PI*0.0625,
         0.85, 1.3,
-        Vec2d(64.0, 64.0)
+        Vec2d(32.0, 32.0)
     };
 
     trainingImages.clear();
