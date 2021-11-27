@@ -18,10 +18,8 @@ FeatureDetector::FeatureDetector() :
     _layer4a(0.1f, ActivationReLU(0.01f)), _layer4b(ActivationReLU(0.01f), _layer4a.getOptimizerPtr()),
     _layer5a(0.1f, ActivationReLU(0.01f)), _layer5b(ActivationReLU(0.01f), _layer5a.getOptimizerPtr()),
     _layer6a(0.1f, ActivationReLU(0.01f)), _layer6b(ActivationReLU(0.01f), _layer6a.getOptimizerPtr()),
-    _layer7a(0.1f, ActivationReLU(0.01f)), _layer7b(ActivationReLU(0.01f), _layer7a.getOptimizerPtr()),
-    _layer8a(0.1f, ActivationReLU(0.01f)), _layer8b(ActivationReLU(0.01f), _layer8a.getOptimizerPtr()),
-    _layer9a(0.1f, ActivationReLU(0.01f)), _layer9b(ActivationReLU(0.01f), _layer9a.getOptimizerPtr()),
-    _layer10a(0.1f, ActivationTanh()), _layer10b(ActivationTanh(), _layer10a.getOptimizerPtr())
+    _layer7a(0.1f, ActivationTanh()), _layer7b(ActivationTanh(), _layer7a.getOptimizerPtr()),
+    _layer8a(0.1f, ActivationTanh()), _layer8b(ActivationTanh(), _layer8a.getOptimizerPtr())
 {
 }
 
@@ -47,8 +45,6 @@ double FeatureDetector::trainBatch(const TrainingBatch& batch)
     _layer6a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
     _layer7a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
     _layer8a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
-    _layer9a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
-    _layer10a.getOptimizer()->applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
     // no need to call for b-layers since the weights are shared
 
     return loss;
@@ -56,8 +52,8 @@ double FeatureDetector::trainBatch(const TrainingBatch& batch)
 
 float FeatureDetector::operator()(const Feature& f1, const Feature& f2)
 {
-    _v1 = _layer10a(_layer9a(_layer8a(_layer7a(_layer6a(_layer5a(_layer4a(_layer3a(_layer2a(_layer1a(f1.polar))))))))));
-    _v2 = _layer10b(_layer9b(_layer8b(_layer7b(_layer6b(_layer5b(_layer4b(_layer3b(_layer2b(_layer1b(f2.polar))))))))));
+    _v1 = _layer8a(_layer7a(_layer6a(_layer5a(_layer4a(_layer3a(_layer2a(_layer1a(f1.polar))))))));
+    _v2 = _layer8b(_layer7b(_layer6b(_layer5b(_layer4b(_layer3b(_layer2b(_layer1b(f2.polar))))))));
     _diff = _v1-_v2;
     return _diff.norm();
 }
@@ -84,9 +80,7 @@ float FeatureDetector::trainingPass(const Feature& f1, const Feature& f2, float 
         _layer5a.backpropagate(
         _layer6a.backpropagate(
         _layer7a.backpropagate(
-        _layer8a.backpropagate(
-        _layer9a.backpropagate(
-        _layer10a.backpropagate(_g))))))))));
+        _layer8a.backpropagate(_g))))))));
 
         _layer1b.backpropagate(
         _layer2b.backpropagate(
@@ -95,9 +89,7 @@ float FeatureDetector::trainingPass(const Feature& f1, const Feature& f2, float 
         _layer5b.backpropagate(
         _layer6b.backpropagate(
         _layer7b.backpropagate(
-        _layer8b.backpropagate(
-        _layer9b.backpropagate(
-        _layer10b.backpropagate(-_g)))))))))); // apply negative gradient to b branch (negated to form diff)
+        _layer8b.backpropagate(-_g)))))))); // apply negative gradient to b branch (negated to form diff)
     }
 
     return loss*loss;
