@@ -194,7 +194,7 @@ void generateDataset(TrainingData& trainingData, const TrainingImages& trainingI
 
     #pragma omp parallel for
     for (int i=0; i<datasetSize; ++i) {
-        std::default_random_engine rnd(i);
+        std::default_random_engine rnd(715517+i);
         float similarity = rnd()%2 == 0 ? 0.0f : 0.5f+RND*0.5f;
         trainingData[i] = makeTrainingEntry(trainingImages, similarity, rnd);
 
