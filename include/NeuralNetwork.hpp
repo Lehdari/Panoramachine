@@ -13,7 +13,7 @@
 
 
 #include "MathTypes.hpp"
-#include <iostream> // TODO temp
+#include "Utils.hpp"
 
 
 // Hyperbolic tangent activation
@@ -76,18 +76,41 @@ private:
 };
 
 
+template <template <typename> class T_Optimizer, typename T_Weights>
+struct Optimizer {
+    template <typename T_Scalar>
+    Optimizer(T_Scalar initAmplitude = 1.0) :
+        w   (T_Weights::Random() * initAmplitude)
+    {}
+
+    void saveWeights(const std::string& filename)
+    {
+        writeMatrixBinary(filename, w);
+    }
+
+    void loadWeights(const std::string& filename)
+    {
+        readMatrixBinary(filename, w);
+    }
+
+    T_Weights   w;
+
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+};
+
+
 template <typename T_Weights>
-struct OptimizerAdam
+struct OptimizerAdam : public Optimizer<OptimizerAdam, T_Weights>
 {
     template <typename T_Scalar>
     OptimizerAdam(T_Scalar initAmplitude = 1.0) :
-        w   (T_Weights::Random() * initAmplitude),
+        Optimizer<OptimizerAdam, T_Weights>(initAmplitude),
         wg  (T_Weights::Zero()),
         wm  (T_Weights::Zero()),
         wv  (T_Weights::Zero()),
         t   (0)
     {
-        w.template block<T_Weights::RowsAtCompileTime,1>(0,T_Weights::ColsAtCompileTime-1) =
+        this->w.template block<T_Weights::RowsAtCompileTime,1>(0,T_Weights::ColsAtCompileTime-1) =
             Eigen::Matrix<T_Scalar,T_Weights::RowsAtCompileTime,1>::Zero();
     }
 
@@ -107,15 +130,14 @@ struct OptimizerAdam
         T_Scalar alpha = learningRate * (std::sqrt(1.0 - std::pow(momentum2, (T_Scalar)t)) /
             (1.0 - std::pow(momentum, (T_Scalar)t)));
 
-        w -= alpha * wm.template cwiseProduct((wv.cwiseSqrt()+T_Weights::Ones()*epsilon).cwiseInverse());
+        this->w -= alpha * wm.template cwiseProduct((wv.cwiseSqrt()+T_Weights::Ones()*epsilon).cwiseInverse());
 
         if (weightDecay >= epsilon) // weight decay
-            w.noalias() = w*(1.0-weightDecay);
+            this->w.noalias() = this->w*(1.0-weightDecay);
 
         wg = T_Weights::Zero();
     }
 
-    T_Weights   w;
     T_Weights   wg; // gradient
     T_Weights   wm; // first moment
     T_Weights   wv; // second moment
