@@ -11,6 +11,7 @@
 #include "TrainFeatureDetector.hpp"
 #include "Utils.hpp"
 #include "FeatureDetector.hpp"
+#include "ImagePostProcessing.hpp"
 #include <opencv2/highgui.hpp>
 #include <iomanip>
 
@@ -29,7 +30,6 @@ TrainingImage::TrainingImage(cv::Mat&& image,
 :
     original    (std::move(image))
 {
-
     distorted.reserve(nDistorted);
 
     // apply more transforms for images with more area
@@ -50,6 +50,12 @@ TrainingImage::TrainingImage(cv::Mat&& image,
         };
 
         distorted.push_back(std::move(distortImage(original, settings)));
+
+        float bbase = RND*0.8f-0.4f;
+        float cbase = RND*0.8f-0.4f;
+        brightnessContrast(distorted.back().distorted,
+            Vec3f(bbase+RND*0.3f-0.15f, bbase+RND*0.3f-0.15f, bbase+RND*0.3f-0.15f),
+            Vec3f(cbase+RND*0.3f-0.15f, cbase+RND*0.3f-0.15f, cbase+RND*0.3f-0.15f));
     }
 }
 
