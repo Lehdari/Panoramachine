@@ -277,6 +277,7 @@ void trainFeatureDetector()
     TrainingData trainingData;
 
     FeatureDetector<OptimizerAdam> detector;
+    double minEvaluationLoss = std::numeric_limits<double>::max();
     for (int e=0; e<nEpochs; ++e) {
         generateDataset(trainingData, trainingImages, datasetSize);
 
@@ -304,5 +305,11 @@ void trainFeatureDetector()
         printf("Epoch %d finished, trainingLoss: %13.10f, evaluationLoss: %13.10f, time: %ld\n",
             e, trainingLoss/batchesInEpoch, evaluationLoss/evaluationDatasetSize,
             std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
+
+        if (evaluationLoss < minEvaluationLoss) {
+            detector.saveWeights("../feature_detector_model");
+            printf("record evaluationLoss, saving\n");
+            minEvaluationLoss = evaluationLoss;
+        }
     }
 }
