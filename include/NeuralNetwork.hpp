@@ -98,7 +98,6 @@ struct Optimizer {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
-
 template <typename T_Weights>
 struct OptimizerAdam : public Optimizer<OptimizerAdam, T_Weights>
 {
@@ -142,6 +141,20 @@ struct OptimizerAdam : public Optimizer<OptimizerAdam, T_Weights>
     T_Weights   wm; // first moment
     T_Weights   wv; // second moment
     int         t; // timestep index
+
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+};
+
+template <typename T_Weights>
+struct OptimizerStatic : public Optimizer<OptimizerStatic, T_Weights>
+{
+    template <typename T_Scalar>
+    OptimizerStatic(T_Scalar initAmplitude = 1.0) :
+        Optimizer<OptimizerStatic, T_Weights>(initAmplitude)
+    {
+        this->w.template block<T_Weights::RowsAtCompileTime,1>(0,T_Weights::ColsAtCompileTime-1) =
+            Eigen::Matrix<T_Scalar,T_Weights::RowsAtCompileTime,1>::Zero();
+    }
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
