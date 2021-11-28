@@ -22,6 +22,8 @@ public:
     FeatureDetector();
 
     double trainBatch(const TrainingBatch& batch);
+    void saveWeights(const std::string& directory);
+    void loadWeights(const std::string& directory);
 
     float operator()(const Feature& f1, const Feature& f2);
 

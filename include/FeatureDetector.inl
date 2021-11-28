@@ -51,6 +51,32 @@ double FeatureDetector<T_Optimizer>::trainBatch(const TrainingBatch& batch)
 }
 
 template <template <typename> class T_Optimizer>
+void FeatureDetector<T_Optimizer>::saveWeights(const std::string& directory)
+{
+    _layer1a.getOptimizer()->saveWeights(directory + "/layer1.bin");
+    _layer2a.getOptimizer()->saveWeights(directory + "/layer2.bin");
+    _layer3a.getOptimizer()->saveWeights(directory + "/layer3.bin");
+    _layer4a.getOptimizer()->saveWeights(directory + "/layer4.bin");
+    _layer5a.getOptimizer()->saveWeights(directory + "/layer5.bin");
+    _layer6a.getOptimizer()->saveWeights(directory + "/layer6.bin");
+    _layer7a.getOptimizer()->saveWeights(directory + "/layer7.bin");
+    _layer8a.getOptimizer()->saveWeights(directory + "/layer8.bin");
+}
+
+template <template <typename> class T_Optimizer>
+void FeatureDetector<T_Optimizer>::loadWeights(const std::string& directory)
+{
+    _layer1a.getOptimizer()->loadWeights(directory + "/layer1.bin");
+    _layer2a.getOptimizer()->loadWeights(directory + "/layer2.bin");
+    _layer3a.getOptimizer()->loadWeights(directory + "/layer3.bin");
+    _layer4a.getOptimizer()->loadWeights(directory + "/layer4.bin");
+    _layer5a.getOptimizer()->loadWeights(directory + "/layer5.bin");
+    _layer6a.getOptimizer()->loadWeights(directory + "/layer6.bin");
+    _layer7a.getOptimizer()->loadWeights(directory + "/layer7.bin");
+    _layer8a.getOptimizer()->loadWeights(directory + "/layer8.bin");
+}
+
+template <template <typename> class T_Optimizer>
 float FeatureDetector<T_Optimizer>::operator()(const Feature& f1, const Feature& f2)
 {
     _v1 = _layer8a(_layer7a(_layer6a(_layer5a(_layer4a(_layer3a(_layer2a(_layer1a(f1.polar))))))));
