@@ -16,11 +16,13 @@
 
 Feature::Feature() :
     polar   (Eigen::Matrix<float, fsa*6, fsr>::Zero()),
-    energy  (0.0)
+    energy  (0.0),
+    p       (0.0f, 0.0f)
 {
 }
 
-Feature::Feature(const cv::Mat& img, const Vec2f& p, float firstRadius)
+Feature::Feature(const cv::Mat& img, const Vec2f& p, float firstRadius) :
+    p   (p)
 {
     for (int i=0; i<Feature::fsr; ++i) {
         float angle = 2.0f*M_PI*(i/(float)Feature::fsr);

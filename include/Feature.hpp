@@ -24,6 +24,7 @@ struct Feature {
 
     Eigen::Matrix<float, fsa*6, fsr>    polar;
     double                              energy;
+    Vec2f                               p;
 
     Feature();
     Feature(const cv::Mat& img, const Vec2f& p, float firstRadius);
