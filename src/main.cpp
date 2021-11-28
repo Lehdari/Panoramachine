@@ -8,39 +8,36 @@
 // with this source code package.
 //
 
-#include "CorrectionAlgorithms.hpp"
-#include "DistortImage.hpp"
-#include "Utils.hpp"
 #include "TrainFeatureDetector.hpp"
+#include "StitchImages.hpp"
+#include "Utils.hpp"
 #include <opencv2/highgui.hpp>
-#include <random>
+
+
+//#define TRAINING
 
 
 int main(void)
 {
-    trainFeatureDetector();
+    #ifdef TRAINING
+        trainFeatureDetector();
+    #else
+        // TODO replace with proper, argument-based image loading
+        std::vector<std::string> filenames = {"../input/20210909_133243.jpg", "../input/20210909_133239.jpg"};
+        //images.emplace_back(cv::imread("../input/20210909_133249.jpg"));
+        //images.emplace_back(cv::imread("../input/20210909_133246.jpg"));
 
-#if 0
-    std::string imageFileName = std::string(IMAGE_DEMORPHING_RES_DIR) + "lenna.exr";
-    cv::Mat image = cv::imread(imageFileName, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
+        std::vector<cv::Mat> images;
 
-    DistortSettings settings{
-        15, 25,
-        128.0, 512.0,
-        M_PI*0.125,
-        0.85, 0.9,
-        Vec2d(64.0, 64.0)
-    };
-    auto distortedImage = distortImage(image, settings);
-
-    cv::imshow("distorted", distortedImage.distorted);
-    show2ChannelImage("backwardMap", distortedImage.backwardMap);
-    show2ChannelImage("forwardMap", distortedImage.forwardMap);
-    cv::waitKey(10);
-
-    createCorrection2(distortedImage.distorted, image);
-    cv::waitKey(0);
-#endif
+        for (auto& filename : filenames) {
+            cv::Mat img;
+            cv::imread("../input/20210909_133243.jpg").convertTo(img, CV_32FC3, 1/255.0);
+            gammaCorrect(img, 2.2f);
+            images.push_back(std::move(img));
+        }
+        auto result = stitchImages(images);
+        cv::imwrite("../result.exr", result);
+    #endif
 
     return 0;
 }
