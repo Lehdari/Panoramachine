@@ -22,11 +22,11 @@ Feature::Feature() :
 {
 }
 
-Feature::Feature(const cv::Mat& img, const Vec2f& p, float firstRadius) :
+Feature::Feature(const cv::Mat& img, const Vec2f& p, float firstRadius, float rotation) :
     p   (p)
 {
     for (int i=0; i<Feature::fsr; ++i) {
-        float angle = 2.0f*M_PI*(i/(float)Feature::fsr);
+        float angle = 2.0f*M_PI*(i/(float)Feature::fsr) + rotation;
         float r = firstRadius;
         Vec2f dir(std::cos(angle), std::sin(angle));
         for (int j=0; j<Feature::fsa; ++j) {
@@ -35,6 +35,28 @@ Feature::Feature(const cv::Mat& img, const Vec2f& p, float firstRadius) :
         }
     }
 
+    computeDiffAndEnergy();
+}
+
+Feature::Feature(const Image<Vec3f>& img, const Vec2f& p, float firstRadius, float rotation)
+{
+    constexpr float sampleDistanceFactor = (2.0*M_PI)/fsr;
+
+    for (int i=0; i<Feature::fsr; ++i) {
+        float angle = 2.0f*M_PI*(i/(float)Feature::fsr) + rotation;
+        float r = firstRadius;
+        Vec2f dir(std::cos(angle), std::sin(angle));
+        for (int j=0; j<Feature::fsa; ++j) {
+            polar.block<3,1>(j*3,i) = img(p+dir*r, r*sampleDistanceFactor);
+            r *= Feature::frm;
+        }
+    }
+
+    computeDiffAndEnergy();
+}
+
+void Feature::computeDiffAndEnergy()
+{
     float avg = polar.block<fsa*3, fsr>(0,0).sum() / (fsa*3*fsr);
     polar.block<fsa*3, fsr>(0,0).noalias() -= avg * Eigen::Matrix<float, fsa*3, fsr>::Ones();
     energy = std::sqrt((double)polar.block<fsa*3, fsr>(0,0).array().square().sum() / (fsa*3*fsr));

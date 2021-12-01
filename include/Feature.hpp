@@ -15,6 +15,7 @@
 #include <opencv2/core/mat.hpp>
 
 #include "MathTypes.hpp"
+#include "Image.hpp"
 
 
 struct Feature {
@@ -27,7 +28,11 @@ struct Feature {
     Vec2f                               p;
 
     Feature();
-    Feature(const cv::Mat& img, const Vec2f& p, float firstRadius);
+    Feature(const cv::Mat& img, const Vec2f& p, float firstRadius, float rotation=0.0f);
+    Feature(const Image<Vec3f>& img, const Vec2f& p, float firstRadius, float rotation=0.0f);
+
+private:
+    void computeDiffAndEnergy();
 };
 
 
