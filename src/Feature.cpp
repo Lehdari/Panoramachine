@@ -11,6 +11,7 @@
 #include "Feature.hpp"
 #include "Utils.hpp"
 
+#include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
 
@@ -47,11 +48,14 @@ Feature::Feature(const cv::Mat& img, const Vec2f& p, float firstRadius) :
     }
 }
 
-
-void visualizeFeature(Feature& feature, const std::string& windowName)
+void visualizeFeature(Feature& feature, const std::string& windowName, int scale)
 {
     cv::Mat featureImg(Feature::fsr, Feature::fsa*2, CV_32FC3);
     decltype(feature.polar) polarNormalized = feature.polar*0.5f + 0.5f*decltype(feature.polar)::Ones();
     featureImg.data = reinterpret_cast<unsigned char*>(polarNormalized.data());
+
+    if (scale > 1)
+        cv::resize(featureImg, featureImg, cv::Size(0,0), scale, scale, cv::INTER_NEAREST);
+
     cv::imshow(windowName, featureImg);
 }

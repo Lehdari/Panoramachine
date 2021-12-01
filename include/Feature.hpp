@@ -31,7 +31,7 @@ struct Feature {
 };
 
 
-void visualizeFeature(Feature& feature, const std::string& windowName);
+void visualizeFeature(Feature& feature, const std::string& windowName, int scale=1);
 
 
 #endif //IMAGE_DEMORPHING_FEATURE_HPP
