@@ -53,6 +53,42 @@ T Image<T>::operator()(const Vec2f& p, float r) const
 }
 
 template<typename T>
+cv::Mat& Image<T>::operator[](int layer)
+{
+    return _layers[layer];
+}
+
+template<typename T>
+Image<T>::operator cv::Mat() const
+{
+    return _layers[0];
+}
+
+template<typename T>
+Image<T> Image<T>::clone() const
+{
+    Image<T> imgClone;
+    imgClone._layers.clear();
+
+    for (auto& layer : _layers)
+        imgClone._layers.template emplace_back(layer.clone());
+
+    return imgClone;
+}
+
+template<typename T>
+std::vector<cv::Mat>::iterator Image<T>::begin()
+{
+    return _layers.begin();
+}
+
+template<typename T>
+std::vector<cv::Mat>::iterator Image<T>::end()
+{
+    return _layers.end();
+}
+
+template<typename T>
 cv::Mat Image<T>::downscaleLayer(const cv::Mat& layer)
 {
     cv::Mat downscaled(layer.rows/2+layer.rows%2, layer.cols/2+layer.cols%2, layer.type());

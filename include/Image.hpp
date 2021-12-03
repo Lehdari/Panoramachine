@@ -30,6 +30,17 @@ public:
     // cubic interpolation
     T operator()(const Vec2f& p, float r=0.0f) const;
 
+    // layer access
+    cv::Mat& operator[](int layer);
+
+    // implicit conversion to cv::Mat returns the first layer
+    operator cv::Mat() const;
+
+    Image<T> clone() const;
+
+    std::vector<cv::Mat>::iterator begin();
+    std::vector<cv::Mat>::iterator end();
+
 private:
     std::vector<cv::Mat>    _layers;
 
