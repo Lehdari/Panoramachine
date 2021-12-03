@@ -70,3 +70,11 @@ void readMatrixBinary(const std::string& filename, Matrix& matrix){
     in.read( (char *) matrix.data() , rows*cols*sizeof(typename Matrix::Scalar) );
     in.close();
 }
+
+template <typename T>
+Image<T> readImage(const std::string& filename)
+{
+    cv::Mat img;
+    cv::imread(filename).convertTo(img, PixelFormatMap::format<T>, 1/255.0);
+    return img;
+}
