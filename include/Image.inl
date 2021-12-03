@@ -11,9 +11,16 @@
 #include "Utils.hpp"
 
 
+template<typename T>
+Image<T>::Image()
+{
+    _layers.emplace_back(cv::Mat());
+}
+
 template <typename T>
 Image<T>::Image(cv::Mat&& image)
 {
+    _layers.clear();
     _layers.emplace_back(image.clone());
 
     while (_layers.back().rows > 1 || _layers.back().cols > 1) {

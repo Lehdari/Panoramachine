@@ -20,6 +20,7 @@
 template <typename T>
 class Image {
 public:
+    Image();
     Image(cv::Mat&& image);
     Image(const cv::Mat& image);
 
