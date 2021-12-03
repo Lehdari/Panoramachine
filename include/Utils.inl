@@ -51,8 +51,7 @@ T sampleMatCubic(const cv::Mat& m, const Vec2f& p)
 }
 
 template<class Matrix>
-void writeMatrixBinary(const std::string& filename, const Matrix& matrix){
-    std::ofstream out(filename, std::ios::out | std::ios::binary | std::ios::trunc);
+void writeMatrixBinary(std::ofstream& out, const Matrix& matrix){
     typename Matrix::Index rows=matrix.rows(), cols=matrix.cols();
     out.write((char*) (&rows), sizeof(typename Matrix::Index));
     out.write((char*) (&cols), sizeof(typename Matrix::Index));
@@ -61,14 +60,25 @@ void writeMatrixBinary(const std::string& filename, const Matrix& matrix){
 }
 
 template<class Matrix>
-void readMatrixBinary(const std::string& filename, Matrix& matrix){
-    std::ifstream in(filename, std::ios::in | std::ios::binary);
+void readMatrixBinary(std::ifstream& in, Matrix& matrix){
     typename Matrix::Index rows=0, cols=0;
     in.read((char*) (&rows),sizeof(typename Matrix::Index));
     in.read((char*) (&cols),sizeof(typename Matrix::Index));
     matrix.resize(rows, cols);
     in.read( (char *) matrix.data() , rows*cols*sizeof(typename Matrix::Scalar) );
     in.close();
+}
+
+template<class Matrix>
+void writeMatrixBinary(const std::string& filename, const Matrix& matrix){
+    std::ofstream out(filename, std::ios::out | std::ios::binary | std::ios::trunc);
+    writeMatrixBinary(out, matrix);
+}
+
+template<class Matrix>
+void readMatrixBinary(const std::string& filename, Matrix& matrix){
+    std::ifstream in(filename, std::ios::in | std::ios::binary);
+    readMatrixBinary(in, matrix);
 }
 
 template <typename T>
