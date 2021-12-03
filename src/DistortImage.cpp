@@ -36,7 +36,7 @@ DistortedImage distortImage(const cv::Mat& image, const DistortSettings& setting
         ));
     }
 
-    distortedImage.distorted = image.clone();
+    cv::Mat distorted = cv::Mat(image.rows, image.cols, CV_32FC3);
     distortedImage.backwardMap = cv::Mat(image.rows, image.cols, CV_32FC2);
     distortedImage.forwardMap = cv::Mat(image.rows, image.cols, CV_32FC2);
 
@@ -44,11 +44,11 @@ DistortedImage distortImage(const cv::Mat& image, const DistortSettings& setting
     forwardTargetVectors.reserve(image.cols*image.rows);
     KdTree<Vec2d, Vec2d> forwardPoints;
 
-    #pragma omp parallel for
-    for (int j=0; j<distortedImage.distorted.rows; ++j) {
-        auto* rDistorted = distortedImage.distorted.ptr<Vec3f>(j);
+    #pragma omp parallel for schedule(static, 1)
+    for (int j=0; j<distorted.rows; ++j) {
+        auto* rDistorted = distorted.ptr<Vec3f>(j);
         auto* rBackward = distortedImage.backwardMap.ptr<Vec2f>(j);
-        for (int i=0; i<distortedImage.distorted.cols; ++i) {
+        for (int i=0; i<distorted.cols; ++i) {
             Vec2d pTarget(i+0.5f, j+0.5f);
 
             Vec2d pSource = pTarget;
@@ -68,7 +68,7 @@ DistortedImage distortImage(const cv::Mat& image, const DistortSettings& setting
 
     forwardPoints.build();
 
-    #pragma omp parallel for
+    #pragma omp parallel for schedule(static, 1)
     for (int j=0; j<distortedImage.forwardMap.rows; ++j) {
         auto* rForward = distortedImage.forwardMap.ptr<Vec2f>(j);
         for (int i=0; i<distortedImage.forwardMap.cols; ++i) {
@@ -76,6 +76,8 @@ DistortedImage distortImage(const cv::Mat& image, const DistortSettings& setting
             rForward[i] = forwardPoints.getNearest(p).second->cast<float>();
         }
     }
+
+    distortedImage.distorted = Image<Vec3f>(std::move(distorted));
 
     return distortedImage;
 }

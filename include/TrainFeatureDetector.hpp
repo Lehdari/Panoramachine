@@ -15,16 +15,17 @@
 #include <vector>
 #include <random>
 
-#include <DistortImage.hpp>
-#include <Feature.hpp>
+#include "DistortImage.hpp"
+#include "Feature.hpp"
+#include "Image.hpp"
 
 
 // Original image with multiple disroted ones, used for training entry generation
 struct TrainingImage {
-    cv::Mat                     original;
+    Image<Vec3f>                original;
     std::vector<DistortedImage> distorted;
 
-    TrainingImage(cv::Mat&& image,
+    TrainingImage(Image<Vec3f>&& image,
         int nDistorted,
         const DistortSettings& minSettings,
         const DistortSettings& maxSettings);

@@ -12,12 +12,11 @@
 #define IMAGE_DEMORPHING_IMAGEPOSTPROCESSING_HPP
 
 
-#include <opencv2/core/mat.hpp>
-
 #include "MathTypes.hpp"
+#include "Image.hpp"
 
 
-void brightnessContrast(cv::Mat& img, const Vec3f& brightness, const Vec3f& contrast);
+void brightnessContrast(Image<Vec3f>& img, const Vec3f& brightness, const Vec3f& contrast);
 
 
 #endif //IMAGE_DEMORPHING_IMAGEPOSTPROCESSING_HPP

@@ -13,7 +13,9 @@
 
 
 #include <opencv2/core/mat.hpp>
+
 #include "MathTypes.hpp"
+#include "Image.hpp"
 
 
 struct DistortSettings {
@@ -30,9 +32,9 @@ struct DistortSettings {
 };
 
 struct DistortedImage {
-    cv::Mat distorted;
-    cv::Mat backwardMap;
-    cv::Mat forwardMap;
+    Image<Vec3f>    distorted;
+    cv::Mat         backwardMap;
+    cv::Mat         forwardMap;
 };
 
 

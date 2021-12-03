@@ -11,14 +11,16 @@
 #include "ImagePostProcessing.hpp"
 
 
-void brightnessContrast(cv::Mat& img, const Vec3f& brightness, const Vec3f& contrast)
+void brightnessContrast(Image<Vec3f>& img, const Vec3f& brightness, const Vec3f& contrast)
 {
-    #pragma omp parallel for
-    for (int j=0; j<img.rows; ++j) {
-        auto* r = img.ptr<Vec3f>(j);
-        for (int i=0; i<img.cols; ++i) {
-            r[i] = (r[i].cwiseProduct(Vec3f::Ones()+contrast)+brightness)
-                .cwiseMax(Vec3f::Zero()).cwiseMin(Vec3f::Ones());
+    for (auto& layer : img) {
+        #pragma omp parallel for
+        for (int j=0; j<layer.rows; ++j) {
+            auto* r = layer.ptr<Vec3f>(j);
+            for (int i=0; i<layer.cols; ++i) {
+                r[i] = (r[i].cwiseProduct(Vec3f::Ones()+contrast)+brightness)
+                    .cwiseMax(Vec3f::Zero()).cwiseMin(Vec3f::Ones());
+            }
         }
     }
 }

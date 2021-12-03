@@ -14,6 +14,7 @@
 #include "ImagePostProcessing.hpp"
 #include <opencv2/highgui.hpp>
 #include <iomanip>
+#include <filesystem>
 
 
 #define RND ((rnd()%1000001)*0.000001)
@@ -23,7 +24,7 @@
 std::default_random_engine TrainingImage::rnd(15077155157);
 
 
-TrainingImage::TrainingImage(cv::Mat&& image,
+TrainingImage::TrainingImage(Image<Vec3f>&& image,
     int nDistorted,
     const DistortSettings& minSettings,
     const DistortSettings& maxSettings)
@@ -33,7 +34,7 @@ TrainingImage::TrainingImage(cv::Mat&& image,
     distorted.reserve(nDistorted);
 
     // apply more transforms for images with more area
-    double nTransformsMultiplier = (original.rows*original.cols) / (1024.0*1024.0);
+    double nTransformsMultiplier = (original[0].rows*original[0].cols) / (1024.0*1024.0);
 
     for (int i=0; i<nDistorted; ++i) {
         DistortSettings settings {
@@ -84,8 +85,8 @@ TrainingEntry makeTrainingEntry(
     float similarity,
     std::default_random_engine& rnd)
 {
-    const cv::Mat* img1(nullptr);
-    const cv::Mat* img2(nullptr);
+    const Image<Vec3f>* img1(nullptr);
+    const Image<Vec3f>* img2(nullptr);
     Feature f1, f2;
     Vec2f p1, p2;
 
@@ -159,29 +160,15 @@ void generateTrainingImages(TrainingImages& trainingImages)
     };
 
     trainingImages.clear();
-    trainingImages.emplace_back(cv::imread(std::string(IMAGE_DEMORPHING_RES_DIR) + "mountains1.exr",
-        cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH), 8, minSettings, maxSettings);
-    trainingImages.emplace_back(cv::imread(std::string(IMAGE_DEMORPHING_RES_DIR) + "lenna.exr",
-        cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH), 8, minSettings, maxSettings);
-#if 0
-    trainingImages.emplace_back(cv::imread(std::string(IMAGE_DEMORPHING_RES_DIR) + "city1.exr",
-        cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH), 8, minSettings, maxSettings);
-    trainingImages.emplace_back(cv::imread(std::string(IMAGE_DEMORPHING_RES_DIR) + "city2.exr",
-        cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH), 8, minSettings, maxSettings);
-    trainingImages.emplace_back(cv::imread(std::string(IMAGE_DEMORPHING_RES_DIR) + "forest1.exr",
-        cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH), 8, minSettings, maxSettings);
-#endif
+    for (const auto & entry : std::filesystem::directory_iterator("../training_data/")) {
+        printf("processing %s...\n", entry.path().string().c_str());
+        trainingImages.emplace_back(readImage<Vec3f>(entry.path()), 8, minSettings, maxSettings);
+    }
 #if 0
     for (auto& img : trainingImages) {
-        cv::imshow("original", img.original);
-        cv::imshow("distorted1", img.distorted[0].distorted);
-        cv::imshow("distorted2", img.distorted[1].distorted);
-        cv::imshow("distorted3", img.distorted[2].distorted);
-        cv::imshow("distorted4", img.distorted[3].distorted);
-        cv::imshow("distorted5", img.distorted[4].distorted);
-        cv::imshow("distorted6", img.distorted[5].distorted);
-        cv::imshow("distorted7", img.distorted[6].distorted);
-        cv::imshow("distorted8", img.distorted[7].distorted);
+        cv::imshow("original", img.original[0]);
+        cv::imshow("distorted1", img.distorted[0].distorted[0]);
+        cv::imshow("distorted2", img.distorted[1].distorted[0]);
         cv::waitKey(0);
     }
 #endif
