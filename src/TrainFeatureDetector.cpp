@@ -52,11 +52,11 @@ TrainingImage::TrainingImage(Image<Vec3f>&& image,
 
         distorted.push_back(std::move(distortImage(original, settings)));
 
-        float bbase = RND*0.8f-0.4f;
-        float cbase = RND*0.8f-0.4f;
+        float bbase = RND*1.4f-0.7f;
+        float cbase = RND*1.4f-0.7f;
         brightnessContrast(distorted.back().distorted,
-            Vec3f(bbase+RND*0.3f-0.15f, bbase+RND*0.3f-0.15f, bbase+RND*0.3f-0.15f),
-            Vec3f(cbase+RND*0.3f-0.15f, cbase+RND*0.3f-0.15f, cbase+RND*0.3f-0.15f));
+            Vec3f(bbase+RND*0.1f-0.05f, bbase+RND*0.1f-0.05f, bbase+RND*0.1f-0.05f),
+            Vec3f(cbase+RND*0.1f-0.05f, cbase+RND*0.1f-0.05f, cbase+RND*0.1f-0.05f));
     }
 }
 
