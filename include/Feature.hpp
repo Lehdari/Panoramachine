@@ -31,6 +31,7 @@ struct Feature {
     Feature(const cv::Mat& img, const Vec2f& p, float firstRadius, float rotation=0.0f);
     Feature(const Image<Vec3f>& img, const Vec2f& p, float firstRadius, float rotation=0.0f);
 
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 private:
     void computeDiffAndEnergy();
 };
