@@ -19,13 +19,15 @@
 
 
 struct Feature {
-    static constexpr int fsa = 32; // feature axial size
-    static constexpr int fsr = 128; // feature radial size
-    static constexpr float frm = 1.1387886347566f; // feature radius multiplier
+    static constexpr int fsa = 32; // feature axial size (in pixels)
+    static constexpr int fsr = 128; // feature radial size (in pixels)
+    static constexpr double frm = 1.1387886347566; // feature radius multiplier
+    static constexpr double fmr = 64.0; // max radius ratio to firstRadius, frm^fsa
 
     Eigen::Matrix<float, fsa*6, fsr>    polar;
     double                              energy;
     Vec2f                               p;
+    float                               firstRadius;
 
     Feature();
     Feature(const cv::Mat& img, const Vec2f& p, float firstRadius, float rotation=0.0f);

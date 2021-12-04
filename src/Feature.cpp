@@ -16,14 +16,16 @@
 
 
 Feature::Feature() :
-    polar   (Eigen::Matrix<float, fsa*6, fsr>::Zero()),
-    energy  (0.0),
-    p       (0.0f, 0.0f)
+    polar       (Eigen::Matrix<float, fsa*6, fsr>::Zero()),
+    energy      (0.0),
+    p           (0.0f, 0.0f),
+    firstRadius (0.0f)
 {
 }
 
 Feature::Feature(const cv::Mat& img, const Vec2f& p, float firstRadius, float rotation) :
-    p   (p)
+    p           (p),
+    firstRadius (firstRadius)
 {
     for (int i=0; i<Feature::fsr; ++i) {
         float angle = 2.0f*M_PI*(i/(float)Feature::fsr) + rotation;
@@ -38,7 +40,9 @@ Feature::Feature(const cv::Mat& img, const Vec2f& p, float firstRadius, float ro
     computeDiffAndEnergy();
 }
 
-Feature::Feature(const Image<Vec3f>& img, const Vec2f& p, float firstRadius, float rotation)
+Feature::Feature(const Image<Vec3f>& img, const Vec2f& p, float firstRadius, float rotation) :
+    p           (p),
+    firstRadius (firstRadius)
 {
     constexpr float sampleDistanceFactor = (2.0*M_PI)/fsr;
 
