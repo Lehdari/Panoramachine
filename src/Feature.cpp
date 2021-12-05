@@ -64,8 +64,11 @@ void Feature::computeDiffAndEnergy()
     float avg = polar.block<fsa*3, fsr>(0,0).sum() / (fsa*3*fsr);
     polar.block<fsa*3, fsr>(0,0).noalias() -= avg * Eigen::Matrix<float, fsa*3, fsr>::Ones();
     energy = std::sqrt((double)polar.block<fsa*3, fsr>(0,0).array().square().sum() / (fsa*3*fsr));
-    float sdInv = 1.0f / energy;
-    polar.block<fsa*3, fsr>(0,0) *= sdInv;
+
+    if (energy > 1.0e-8f) {
+        float sdInv = 1.0f / energy;
+        polar.block<fsa * 3, fsr>(0, 0) *= sdInv;
+    }
 
     for (int i=0; i<Feature::fsr; ++i) {
         polar.block<Feature::fsa*3, 1>(fsa*3, i) =
