@@ -36,7 +36,7 @@ DistortedImage distortImage(const cv::Mat& image, const DistortSettings& setting
         ));
     }
 
-    cv::Mat distorted = cv::Mat(image.rows, image.cols, CV_32FC3);
+    cv::Mat distorted = image.clone();
     distortedImage.backwardMap = cv::Mat(image.rows, image.cols, CV_32FC2);
     distortedImage.forwardMap = cv::Mat(image.rows, image.cols, CV_32FC2);
 
