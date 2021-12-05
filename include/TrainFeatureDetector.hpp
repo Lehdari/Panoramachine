@@ -41,6 +41,9 @@ struct TrainingEntry {
     Feature f1;
     Feature f2;
     float   diff;
+
+    void writeToFile(const std::string& filename) const;
+    void readFromFile(const std::string& filename);
 };
 
 using TrainingData = std::vector<TrainingEntry>;
