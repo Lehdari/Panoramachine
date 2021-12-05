@@ -74,6 +74,36 @@ void Feature::computeDiffAndEnergy()
     }
 }
 
+void Feature::writeToFile(std::ofstream& out) const
+{
+    out.write((char*) (&energy), sizeof(decltype(energy)));
+    out.write((char*) (&firstRadius), sizeof(decltype(firstRadius)));
+    writeMatrixBinary(out, p);
+    writeMatrixBinary(out, polar);
+}
+
+void Feature::readFromFile(std::ifstream& in)
+{
+    in.read((char*) (&energy), sizeof(decltype(energy)));
+    in.read((char*) (&firstRadius), sizeof(decltype(firstRadius)));
+    readMatrixBinary(in, p);
+    readMatrixBinary(in, polar);
+}
+
+void Feature::writeToFile(const std::string& filename) const
+{
+    std::ofstream out(filename, std::ios::out | std::ios::binary | std::ios::trunc);
+    writeToFile(out);
+    out.close();
+}
+
+void Feature::readFromFile(const std::string& filename)
+{
+    std::ifstream in(filename, std::ios::in | std::ios::binary);
+    readFromFile(in);
+    in.close();
+}
+
 void visualizeFeature(Feature& feature, const std::string& windowName, int scale)
 {
     cv::Mat featureImg(Feature::fsr, Feature::fsa*2, CV_32FC3);

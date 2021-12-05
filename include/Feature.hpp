@@ -33,6 +33,11 @@ struct Feature {
     Feature(const cv::Mat& img, const Vec2f& p, float firstRadius, float rotation=0.0f);
     Feature(const Image<Vec3f>& img, const Vec2f& p, float firstRadius, float rotation=0.0f);
 
+    void writeToFile(std::ofstream& out) const;
+    void readFromFile(std::ifstream& in);
+    void writeToFile(const std::string& filename) const;
+    void readFromFile(const std::string& filename);
+
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 private:
     void computeDiffAndEnergy();
