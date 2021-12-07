@@ -16,7 +16,7 @@
 
 
 Feature::Feature() :
-    polar       (Eigen::Matrix<float, fsa*6, fsr>::Zero()),
+    polar       (Polar::Zero()),
     energy      (0.0),
     p           (0.0f, 0.0f),
     firstRadius (0.0f)
@@ -24,6 +24,8 @@ Feature::Feature() :
 }
 
 Feature::Feature(const cv::Mat& img, const Vec2f& p, float firstRadius, float rotation) :
+    polar       (Polar::Zero()),
+    energy      (0.0),
     p           (p),
     firstRadius (firstRadius)
 {
@@ -32,7 +34,7 @@ Feature::Feature(const cv::Mat& img, const Vec2f& p, float firstRadius, float ro
         float r = firstRadius;
         Vec2f dir(std::cos(angle), std::sin(angle));
         for (int j=0; j<Feature::fsa; ++j) {
-            polar.block<3,1>(j*3,i) = sampleMatCubic<Vec3f>(img, p+dir*r);
+            polar.block<3,1>(j*4,i) = sampleMatCubic<Vec3f>(img, p+dir*r);
             r *= Feature::frm;
         }
     }
@@ -41,6 +43,8 @@ Feature::Feature(const cv::Mat& img, const Vec2f& p, float firstRadius, float ro
 }
 
 Feature::Feature(const Image<Vec3f>& img, const Vec2f& p, float firstRadius, float rotation) :
+    polar       (Polar::Zero()),
+    energy      (0.0),
     p           (p),
     firstRadius (firstRadius)
 {
@@ -51,7 +55,7 @@ Feature::Feature(const Image<Vec3f>& img, const Vec2f& p, float firstRadius, flo
         float r = firstRadius;
         Vec2f dir(std::cos(angle), std::sin(angle));
         for (int j=0; j<Feature::fsa; ++j) {
-            polar.block<3,1>(j*3,i) = img(p+dir*r, r*sampleDistanceFactor);
+            polar.block<3,1>(j*4,i) = img(p+dir*r, r*sampleDistanceFactor);
             r *= Feature::frm;
         }
     }
@@ -61,19 +65,23 @@ Feature::Feature(const Image<Vec3f>& img, const Vec2f& p, float firstRadius, flo
 
 void Feature::computeDiffAndEnergy()
 {
-    float avg = polar.block<fsa*3, fsr>(0,0).sum() / (fsa*3*fsr);
-    polar.block<fsa*3, fsr>(0,0).noalias() -= avg * Eigen::Matrix<float, fsa*3, fsr>::Ones();
-    energy = std::sqrt((double)polar.block<fsa*3, fsr>(0,0).array().square().sum() / (fsa*3*fsr));
+    static Eigen::Matrix<float, 3, fsr> diffWeights = Vec3f(0.2f, 0.5f, 0.3f).replicate<1,fsr>();
+
+    double avg = polar.sum() / (fsa*3*fsr);
+    polar.noalias() -= avg * Polar::Ones();
+    energy = std::sqrt(((double)(polar.array().square().sum()) - avg*avg*fsa*fsr) / (fsa*3*fsr));
 
     if (energy > 1.0e-8f) {
         float sdInv = 1.0f / energy;
-        polar.block<fsa * 3, fsr>(0, 0) *= sdInv;
+        polar *= sdInv;
     }
 
-    for (int i=0; i<Feature::fsr; ++i) {
-        polar.block<Feature::fsa*3, 1>(fsa*3, i) =
-            polar.block<Feature::fsa*3, 1>(0, (i+1)%Feature::fsr) -
-                polar.block<Feature::fsa*3, 1>(0, i);
+    Polar polarShifted;
+    polarShifted << polar.block<fsa*4, 1>(0,fsr-1), polar.block<fsa*4, fsr-1>(0,0);
+
+    for (int i=0; i<Feature::fsa; ++i) {
+        polar.block<1,fsr>(i*4+3, 0) = (polarShifted.block<3,fsr>(i*4, 0) - polar.block<3,fsr>(i*4, 0)).
+            cwiseProduct(diffWeights).colwise().sum();
     }
 }
 
@@ -110,8 +118,14 @@ void Feature::readFromFile(const std::string& filename)
 void visualizeFeature(Feature& feature, const std::string& windowName, int scale)
 {
     cv::Mat featureImg(Feature::fsr, Feature::fsa*2, CV_32FC3);
-    decltype(feature.polar) polarNormalized = feature.polar*0.5f + 0.5f*decltype(feature.polar)::Ones();
-    featureImg.data = reinterpret_cast<unsigned char*>(polarNormalized.data());
+
+    for (int j=0; j<Feature::fsr; ++j) {
+        auto* r = featureImg.ptr<Vec3f>(j);
+        for (int i=0; i<Feature::fsa; ++i) {
+            r[i] = Vec3f(0.5f, 0.5f, 0.5f) + feature.polar.block<3,1>(i*4,j)*0.5f;
+            r[i+Feature::fsa] = Vec3f::Ones()*(0.5f + feature.polar(i*4+3,j)*0.5f);
+        }
+    }
 
     if (scale > 1)
         cv::resize(featureImg, featureImg, cv::Size(0,0), scale, scale, cv::INTER_NEAREST);

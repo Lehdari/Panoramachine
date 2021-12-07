@@ -17,8 +17,9 @@ FeatureDetector<T_Optimizer>::FeatureDetector() :
     _layer4a(0.1f, ActivationReLU(0.01f)), _layer4b(ActivationReLU(0.01f), _layer4a.getOptimizerPtr()),
     _layer5a(0.1f, ActivationReLU(0.01f)), _layer5b(ActivationReLU(0.01f), _layer5a.getOptimizerPtr()),
     _layer6a(0.1f, ActivationReLU(0.01f)), _layer6b(ActivationReLU(0.01f), _layer6a.getOptimizerPtr()),
-    _layer7a(0.1f, ActivationTanh()), _layer7b(ActivationTanh(), _layer7a.getOptimizerPtr()),
-    _layer8a(0.1f, ActivationTanh()), _layer8b(ActivationTanh(), _layer8a.getOptimizerPtr())
+    _layer7a(0.1f, ActivationReLU(0.01f)), _layer7b(ActivationReLU(0.01f), _layer7a.getOptimizerPtr()),
+    _layer8a(0.1f, ActivationTanh()), _layer8b(ActivationTanh(), _layer8a.getOptimizerPtr()),
+    _layer9a(0.1f, ActivationTanh()), _layer9b(ActivationTanh(), _layer9a.getOptimizerPtr())
 {
 }
 
@@ -33,10 +34,10 @@ double FeatureDetector<T_Optimizer>::trainBatch(const TrainingBatch& batch)
     }
     loss /= n;
 
-    constexpr float learningRate = 0.001f;
-    constexpr float momentum = 0.9f;
+    constexpr float learningRate = 0.0001f;
+    constexpr float momentum = 0.99f;
     constexpr float momentum2 = 0.999f;
-    constexpr float weightDecay = 0.01f;
+    constexpr float weightDecay = 0.0005f;
     _layer1a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
     _layer2a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
     _layer3a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
@@ -45,6 +46,7 @@ double FeatureDetector<T_Optimizer>::trainBatch(const TrainingBatch& batch)
     _layer6a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
     _layer7a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
     _layer8a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer9a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
     // no need to call for b-layers since the weights are shared
 
     return loss;
@@ -61,6 +63,7 @@ void FeatureDetector<T_Optimizer>::saveWeights(const std::string& directory)
     _layer6a.getOptimizer()->saveWeights(directory + "/layer6.bin");
     _layer7a.getOptimizer()->saveWeights(directory + "/layer7.bin");
     _layer8a.getOptimizer()->saveWeights(directory + "/layer8.bin");
+    _layer9a.getOptimizer()->saveWeights(directory + "/layer9.bin");
 }
 
 template <template <typename> class T_Optimizer>
@@ -74,13 +77,14 @@ void FeatureDetector<T_Optimizer>::loadWeights(const std::string& directory)
     _layer6a.getOptimizer()->loadWeights(directory + "/layer6.bin");
     _layer7a.getOptimizer()->loadWeights(directory + "/layer7.bin");
     _layer8a.getOptimizer()->loadWeights(directory + "/layer8.bin");
+    _layer9a.getOptimizer()->loadWeights(directory + "/layer9.bin");
 }
 
 template <template <typename> class T_Optimizer>
 float FeatureDetector<T_Optimizer>::operator()(const Feature& f1, const Feature& f2)
 {
-    _v1 = _layer8a(_layer7a(_layer6a(_layer5a(_layer4a(_layer3a(_layer2a(_layer1a(f1.polar))))))));
-    _v2 = _layer8b(_layer7b(_layer6b(_layer5b(_layer4b(_layer3b(_layer2b(_layer1b(f2.polar))))))));
+    _v1 = _layer9a(_layer8a(_layer7a(_layer6a(_layer5a(_layer4a(_layer3a(_layer2a(_layer1a(f1.polar)))))))));
+    _v2 = _layer9b(_layer8b(_layer7b(_layer6b(_layer5b(_layer4b(_layer3b(_layer2b(_layer1b(f2.polar)))))))));
     _diff = _v1-_v2;
     return _diff.norm();
 }
@@ -108,7 +112,8 @@ float FeatureDetector<T_Optimizer>::trainingPass(const Feature& f1, const Featur
         _layer5a.backpropagate(
         _layer6a.backpropagate(
         _layer7a.backpropagate(
-        _layer8a.backpropagate(_g))))))));
+        _layer8a.backpropagate(
+        _layer9a.backpropagate(_g)))))))));
 
         _layer1b.backpropagate(
         _layer2b.backpropagate(
@@ -117,7 +122,8 @@ float FeatureDetector<T_Optimizer>::trainingPass(const Feature& f1, const Featur
         _layer5b.backpropagate(
         _layer6b.backpropagate(
         _layer7b.backpropagate(
-        _layer8b.backpropagate(-_g)))))))); // apply negative gradient to b branch (negated to form diff)
+        _layer8b.backpropagate(
+        _layer9b.backpropagate(-_g))))))))); // apply negative gradient to b branch (negated to form diff)
     }
 
     return loss*loss;

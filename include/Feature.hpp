@@ -24,10 +24,11 @@ struct Feature {
     static constexpr double frm = 1.1387886347566; // feature radius multiplier
     static constexpr double fmr = 64.0; // max radius ratio to firstRadius, frm^fsa
 
-    Eigen::Matrix<float, fsa*6, fsr>    polar;
-    double                              energy;
-    Vec2f                               p;
-    float                               firstRadius;
+    using Polar = Eigen::Matrix<float, fsa*4, fsr>;
+    Polar   polar;
+    double  energy;
+    Vec2f   p;
+    float   firstRadius;
 
     Feature();
     Feature(const cv::Mat& img, const Vec2f& p, float firstRadius, float rotation=0.0f);
