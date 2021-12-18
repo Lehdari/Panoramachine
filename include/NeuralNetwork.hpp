@@ -285,5 +285,65 @@ private:
     Output                                  _weighed; // weights * input
 };
 
+template <typename T_Scalar, typename T_Activation, template <typename> class T_Optimizer,
+    int T_InputRows, int T_InputCols, int T_OutputRows>
+class LayerConv
+{
+public:
+    using Input = Eigen::Matrix<T_Scalar, T_InputRows, T_InputCols>;
+    using Output = Eigen::Matrix<T_Scalar, T_OutputRows, T_InputCols>;
+    using InputExtended = Eigen::Matrix<T_Scalar, T_InputRows+1, T_InputCols>;
+    using Weights = Eigen::Matrix<T_Scalar, T_OutputRows, T_InputRows+1>;
+
+    LayerConv(T_Scalar initAmplitude = 1.0,
+        T_Activation&& activation = T_Activation()) :
+        _activation (activation),
+        _optimizer  (std::make_shared<T_Optimizer<Weights>>(initAmplitude)),
+        _input      (InputExtended::Ones())
+    {
+    }
+
+    LayerConv(
+        T_Activation&& activation,
+        const std::shared_ptr<T_Optimizer<Weights>>& optimizer) :
+        _activation (activation),
+        _optimizer  (optimizer),
+        _input      (InputExtended::Ones())
+    {
+    }
+
+    inline Output operator()(const Input& x)
+    {
+        _input.template block<T_InputRows,T_InputCols>(0,0) = x;
+        _weighed = _optimizer->w * _input;
+        return _activation.activation(_weighed);
+    }
+
+    inline Input backpropagate(const Output& g)
+    {
+        Output ag = _activation.gradient(_weighed).cwiseProduct(g);
+        _optimizer->wg += ag * _input.transpose();
+        return _optimizer->w.template block<T_OutputRows, T_InputRows>(0,0).transpose() * ag;
+    }
+
+    T_Optimizer<Weights>* getOptimizer()
+    {
+        return _optimizer.get();
+    }
+
+    const std::shared_ptr<T_Optimizer<Weights>>& getOptimizerPtr()
+    {
+        return _optimizer;
+    }
+
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+private:
+    T_Activation                            _activation;
+    std::shared_ptr<T_Optimizer<Weights>>   _optimizer;
+    InputExtended                           _input; // last input
+    Output                                  _weighed; // weights * input
+};
+
 
 #endif //IMAGE_DEMORPHING_NEURALNETWORK_HPP
