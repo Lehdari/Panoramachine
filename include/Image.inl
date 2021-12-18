@@ -91,31 +91,34 @@ std::vector<cv::Mat>::iterator Image<T>::end()
 template<typename T>
 cv::Mat Image<T>::downscaleLayer(const cv::Mat& layer)
 {
+    constexpr float kernel[] = {
+        1.0f, 4.0f, 6.0f, 4.0f, 1.0f
+    };
+    constexpr int kernelSize = sizeof(kernel) / sizeof(decltype(*kernel));
+    constexpr int kernelOffset = (kernelSize-1)/2;
+
     cv::Mat downscaled(layer.rows/2+layer.rows%2, layer.cols/2+layer.cols%2, layer.type());
 
+    #pragma omp parallel for
     for (int j=0; j<downscaled.rows; ++j) {
         auto* r = downscaled.ptr<T>(j);
         for (int i=0; i<downscaled.cols; ++i) {
-            int ii = i*2;
-            int jj = j*2;
-            int nSamples = 1;
+            int ik = i*2-kernelOffset;
+            int jk = j*2-kernelOffset;
+            float weight = 0.0f;
+            r[i] = T::Zero();
+            for (int jj=0; jj<kernelSize; ++jj) {
+                for (int ii=0; ii<kernelSize; ++ii) {
+                    int i2 = ik+ii;
+                    int j2 = jk+jj;
+                    if (i2 < 0 || i2 >= layer.cols || j2 < 0 || j2 >= layer.rows)
+                        continue;
 
-            r[i] = layer.at<T>(jj, ii);
-            if (ii+1 < layer.cols) {
-                r[i] += layer.at<T>(jj, ii+1);
-                ++nSamples;
-            }
-
-            if (jj+1 < layer.rows) {
-                r[i] += layer.at<T>(jj+1, ii);
-                ++nSamples;
-                if (ii+1 < layer.cols) {
-                    r[i] += layer.at<T>(jj+1, ii+1);
-                    ++nSamples;
+                    r[i] += kernel[ii]*kernel[jj]*layer.at<T>(j2, i2);
+                    weight += kernel[ii]*kernel[jj];
                 }
             }
-
-            r[i] /= nSamples;
+            r[i] /= weight;
         }
     }
 
