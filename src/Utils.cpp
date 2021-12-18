@@ -79,3 +79,19 @@ void show2ChannelImage(const std::string& windowName, const cv::Mat& image)
 
     cv::imshow(windowName, image2);
 }
+
+cv::Mat load2ChannelImage(const std::string& filename)
+{
+    cv::Mat img1 = cv::imread(filename, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
+    cv::Mat img2(img1.rows, img1.cols, CV_32FC2);
+
+    for (int j=0; j<img1.rows; ++j) {
+        auto* r = img1.ptr<Vec3f>(j);
+        auto* r2 = img2.ptr<Vec2f>(j);
+        for (int i=0; i<img1.cols; ++i) {
+            r2[i] = r[i].block<2,1>(0,0);
+        }
+    }
+
+    return img2;
+}

@@ -24,6 +24,7 @@ Vec3f sampleMatCubic(const cv::Mat& m, const Vec2f& p);
 void gammaCorrect(cv::Mat& image, float gamma);
 cv::Mat correctImage(const cv::Mat& image, const cv::Mat& correction);
 void show2ChannelImage(const std::string& windowName, const cv::Mat& image);
+cv::Mat load2ChannelImage(const std::string& filename);
 
 // Map from vector/scalar types to OpenCV pixel formats
 struct PixelFormatMap { template <typename U> static constexpr int format = 0; };
