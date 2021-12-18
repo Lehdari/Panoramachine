@@ -30,6 +30,9 @@ struct TrainingImage {
         const DistortSettings& minSettings,
         const DistortSettings& maxSettings);
 
+    void write(const std::string& stem) const;
+    bool read(const std::string& stem, int nDistorted);
+
 private:
     static std::default_random_engine rnd;
 };
@@ -41,7 +44,7 @@ struct TrainingEntry {
     Feature f1;
     Feature f2;
     float   diff;
-
+    
     void writeToFile(const std::string& filename) const;
     void readFromFile(const std::string& filename);
 };

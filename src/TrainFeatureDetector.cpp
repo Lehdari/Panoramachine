@@ -61,6 +61,57 @@ TrainingImage::TrainingImage(Image<Vec3f>&& image,
     }
 }
 
+void TrainingImage::write(const std::string& stem) const
+{
+    cv::imwrite(stem + std::string("_original.exr"), static_cast<cv::Mat>(original));
+
+    for (int i=0; i<distorted.size(); ++i) {
+        std::stringstream distortedFilename, backwardMapFilename, forwardMapFilename;
+        distortedFilename << stem << "_distorted" << std::setfill('0') << std::setw(4) << i << ".exr";
+        backwardMapFilename << stem << "_backwardmap" << std::setfill('0') << std::setw(4) << i << ".exr";
+        forwardMapFilename << stem << "_forwardmap" << std::setfill('0') << std::setw(4) << i << ".exr";
+
+        cv::Mat backwardMapOut(distorted[i].backwardMap.rows, distorted[i].backwardMap.cols, CV_32FC3);
+        cv::Mat forwardMapOut(distorted[i].forwardMap.rows, distorted[i].forwardMap.cols, CV_32FC3);
+        int mix[] = {0,0, 1,1, 1,2};
+        cv::mixChannels(&(distorted[i].backwardMap), 1, &backwardMapOut, 1, mix, 3);
+        cv::mixChannels(&(distorted[i].forwardMap), 1, &forwardMapOut, 1, mix, 3);
+        cv::imwrite(distortedFilename.str(), static_cast<cv::Mat>(distorted[i].distorted));
+        cv::imwrite(backwardMapFilename.str(), backwardMapOut);
+        cv::imwrite(forwardMapFilename.str(), forwardMapOut);
+    }
+}
+
+bool TrainingImage::read(const std::string& stem, int nDistorted)
+{
+    if (!std::filesystem::exists(stem + std::string("_original.exr")))
+        return false;
+
+    original = Image<Vec3f>(cv::imread(stem + std::string("_original.exr"),
+        cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH));
+
+    distorted.clear();
+    distorted.reserve(nDistorted);
+    for (int i=0; i<nDistorted; ++i) {
+        std::stringstream distortedFilename, backwardMapFilename, forwardMapFilename;
+        distortedFilename << stem << "_distorted" << std::setfill('0') << std::setw(4) << i << ".exr";
+        backwardMapFilename << stem << "_backwardmap" << std::setfill('0') << std::setw(4) << i << ".exr";
+        forwardMapFilename << stem << "_forwardmap" << std::setfill('0') << std::setw(4) << i << ".exr";
+
+        if (!std::filesystem::exists(distortedFilename.str()))
+            return false;
+
+        DistortedImage distortedImage {
+            Image<Vec3f>(cv::imread(distortedFilename.str(), cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH)),
+            load2ChannelImage(backwardMapFilename.str()),
+            load2ChannelImage(forwardMapFilename.str())
+        };
+        distorted.emplace_back(std::move(distortedImage));
+    }
+
+    return true;
+}
+
 void TrainingEntry::writeToFile(const std::string& filename) const
 {
     std::ofstream out(filename, std::ios::out | std::ios::binary | std::ios::trunc);
