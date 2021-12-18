@@ -15,6 +15,7 @@
 #include <opencv2/highgui.hpp>
 #include <iomanip>
 #include <filesystem>
+#include <opencv2/imgproc.hpp>
 
 
 #define RND ((rnd()%1000001)*0.000001)
@@ -24,13 +25,12 @@
 std::default_random_engine TrainingImage::rnd(15077155157);
 
 
-TrainingImage::TrainingImage(Image<Vec3f>&& image,
+void TrainingImage::create(Image<Vec3f>&& image,
     int nDistorted,
     const DistortSettings& minSettings,
     const DistortSettings& maxSettings)
-:
-    original    (std::move(image))
 {
+    original = std::move(image);
     distorted.reserve(nDistorted);
 
     // apply more transforms for images with more area
@@ -194,7 +194,7 @@ TrainingEntry makeMatchingTrainingEntry(
     return { std::move(f1), std::move(f2), diff };
 }
 
-void generateDataset(TrainingData& trainingData, int datasetSize)
+void generateDataset(TrainingData& trainingData, int datasetSize, const std::string& datasetImagesDirectory)
 {
     DistortSettings minSettings{
         10, 12,
@@ -216,7 +216,7 @@ void generateDataset(TrainingData& trainingData, int datasetSize)
     trainingData.resize(datasetSize);
 
     const char* trainingDataDirectory = "../training_data/";
-    constexpr int nDistorted = 7;
+    constexpr int nDistorted = 15;
 
     // read number of images
     int nImages = 0;
@@ -228,7 +228,13 @@ void generateDataset(TrainingData& trainingData, int datasetSize)
     int datasetOffset = 0;
     for (const auto & entry : std::filesystem::directory_iterator(trainingDataDirectory)) {
         printf("Processing %s...\n", entry.path().string().c_str());
-        TrainingImage trainingImage(readImage<Vec3f>(entry.path()), nDistorted, minSettings, maxSettings);
+
+        std::string imageStem = datasetImagesDirectory + std::string("/") + entry.path().stem().string();
+        TrainingImage trainingImage;
+        if (!trainingImage.read(imageStem, nDistorted)) { // create training image if files are not found
+            trainingImage.create(readImage<Vec3f>(entry.path()), nDistorted, minSettings, maxSettings);
+            trainingImage.write(imageStem);
+        }
 
 #if 0
         cv::imshow("original", trainingImage.original[0]);
@@ -236,6 +242,12 @@ void generateDataset(TrainingData& trainingData, int datasetSize)
             std::stringstream windowName;
             windowName << "distorted" << i;
             cv::imshow(windowName.str(), trainingImage.distorted[i].distorted[0]);
+            std::stringstream windowName2;
+            windowName2 << "backwardMap" << i;
+            show2ChannelImage(windowName2.str(), trainingImage.distorted[i].backwardMap);
+            std::stringstream windowName3;
+            windowName3 << "forwardMap" << i;
+            show2ChannelImage(windowName3.str(), trainingImage.distorted[i].forwardMap);
         }
         cv::waitKey(0);
 #endif
@@ -247,8 +259,8 @@ void generateDataset(TrainingData& trainingData, int datasetSize)
             trainingData[datasetOffset+i] = makeMatchingTrainingEntry(trainingImage, diff, rnd);
 
 #if 0
-            visualizeFeature(trainingData[i].f1, "f1");
-            visualizeFeature(trainingData[i].f2, "f2");
+            visualizeFeature(trainingData[i].f1, "f1", 4);
+            visualizeFeature(trainingData[i].f2, "f2", 4);
             printf("diff: %0.5f r1: %0.5f r2: %0.5f, dis: %0.5f\n",
                 trainingData[i].diff,
                 trainingData[i].f1.firstRadius*Feature::fmr,
@@ -334,11 +346,13 @@ void trainFeatureDetector()
 
 
     TrainingData trainingData;
+    const std::string datasetImagesDirectory = "../temp/images";
     const std::string datasetDirectory = "../temp/dataset";
     if (!std::filesystem::exists("../temp/dataset")) {
         // generate dataset in case it does not yet exist
         printf("Generaring new dataset...\n");
-        generateDataset(trainingData, datasetSize);
+        std::filesystem::create_directories(datasetImagesDirectory);
+        generateDataset(trainingData, datasetSize, datasetImagesDirectory);
         printf("Saving dataset into %s...\n", datasetDirectory.c_str());
         std::filesystem::create_directories(datasetDirectory);
         saveDataset(datasetDirectory, trainingData);

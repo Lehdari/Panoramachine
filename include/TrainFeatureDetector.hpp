@@ -25,7 +25,7 @@ struct TrainingImage {
     Image<Vec3f>                original;
     std::vector<DistortedImage> distorted;
 
-    TrainingImage(Image<Vec3f>&& image,
+    void create(Image<Vec3f>&& image,
         int nDistorted,
         const DistortSettings& minSettings,
         const DistortSettings& maxSettings);
@@ -44,7 +44,7 @@ struct TrainingEntry {
     Feature f1;
     Feature f2;
     float   diff;
-    
+
     void writeToFile(const std::string& filename) const;
     void readFromFile(const std::string& filename);
 };
