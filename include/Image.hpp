@@ -44,6 +44,7 @@ public:
 
     std::vector<cv::Mat>::iterator begin();
     std::vector<cv::Mat>::iterator end();
+    std::vector<cv::Mat>::size_type size() const;
 
 private:
     std::vector<cv::Mat>    _layers;

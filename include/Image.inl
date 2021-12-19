@@ -107,6 +107,12 @@ std::vector<cv::Mat>::iterator Image<T>::end()
 }
 
 template<typename T>
+std::vector<cv::Mat>::size_type Image<T>::size() const
+{
+    return _layers.size();
+}
+
+template<typename T>
 cv::Mat Image<T>::downscaleLayer(const cv::Mat& layer)
 {
     constexpr float kernel[] = {
