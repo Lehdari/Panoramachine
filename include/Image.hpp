@@ -30,6 +30,10 @@ public:
     // cubic interpolation
     T operator()(const Vec2f& p, float r=0.0f) const;
 
+    T sampleCubic(const Vec2f& p, int layer=0) const;
+    T sampleCubicXDeriv(const Vec2f& p, int layer=0) const;
+    T sampleCubicYDeriv(const Vec2f& p, int layer=0) const;
+
     // layer access
     cv::Mat& operator[](int layer);
 

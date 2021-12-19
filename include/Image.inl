@@ -53,6 +53,24 @@ T Image<T>::operator()(const Vec2f& p, float r) const
 }
 
 template<typename T>
+T Image<T>::sampleCubic(const Vec2f& p, int layer) const
+{
+    return sampleMatCubic<T>(_layers[layer], p/(1 << layer));
+}
+
+template<typename T>
+T Image<T>::sampleCubicXDeriv(const Vec2f& p, int layer) const
+{
+    return sampleMatCubicXDeriv<T>(_layers[layer], p/(1 << layer));
+}
+
+template<typename T>
+T Image<T>::sampleCubicYDeriv(const Vec2f& p, int layer) const
+{
+    return sampleMatCubicYDeriv<T>(_layers[layer], p/(1 << layer));
+}
+
+template<typename T>
 cv::Mat& Image<T>::operator[](int layer)
 {
     return _layers[layer];
