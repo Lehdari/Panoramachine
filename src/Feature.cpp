@@ -16,87 +16,34 @@
 
 
 Feature::Feature() :
-    polar       (Polar::Zero()),
-    energy      (0.0),
-    p           (0.0f, 0.0f),
-    firstRadius (0.0f)
+    polar   (Polar::Zero()),
+    p       (0.0f, 0.0f),
+    scale   (0.0f)
 {
 }
 
-Feature::Feature(const cv::Mat& img, const Vec2f& p, float firstRadius, float rotation) :
-    polar       (Polar::Zero()),
-    energy      (0.0),
-    p           (p),
-    firstRadius (firstRadius)
+Feature::Feature(const Image<Vec3f>& img, const Vec2f& p, float scale) :
+    polar   (Polar::Zero()),
+    p       (p),
+    scale   (scale)
 {
-    for (int i=0; i<Feature::fsr; ++i) {
-        float angle = 2.0f*M_PI*(i/(float)Feature::fsr) + rotation;
-        float r = firstRadius;
-        Vec2f dir(std::cos(angle), std::sin(angle));
-        for (int j=0; j<Feature::fsa; ++j) {
-            polar.block<3,1>(j*4,i) = sampleMatCubic<Vec3f>(img, p+dir*r);
-            r *= Feature::frm;
-        }
-    }
-
-    computeDiffAndEnergy();
-}
-
-Feature::Feature(const Image<Vec3f>& img, const Vec2f& p, float firstRadius, float rotation) :
-    polar       (Polar::Zero()),
-    energy      (0.0),
-    p           (p),
-    firstRadius (firstRadius)
-{
-    constexpr float sampleDistanceFactor = (2.0*M_PI)/fsr;
-
-    for (int i=0; i<Feature::fsr; ++i) {
-        float angle = 2.0f*M_PI*(i/(float)Feature::fsr) + rotation;
-        float r = firstRadius;
-        Vec2f dir(std::cos(angle), std::sin(angle));
-        for (int j=0; j<Feature::fsa; ++j) {
-            polar.block<3,1>(j*4,i) = img(p+dir*r, r*sampleDistanceFactor);
-            r *= Feature::frm;
-        }
-    }
-
-    computeDiffAndEnergy();
-}
-
-void Feature::computeDiffAndEnergy()
-{
-    static Eigen::Matrix<float, 3, fsr> diffWeights = Vec3f(0.2f, 0.5f, 0.3f).replicate<1,fsr>();
-
-    double avg = polar.sum() / (fsa*3*fsr);
-    polar.noalias() -= avg * Polar::Ones();
-    energy = std::sqrt(((double)(polar.array().square().sum()) - avg*avg*fsa*fsr) / (fsa*3*fsr));
-
-    if (energy > 1.0e-8f) {
-        float sdInv = 1.0f / energy;
-        polar *= sdInv;
-    }
-
-    Polar polarShifted;
-    polarShifted << polar.block<fsa*4, 1>(0,fsr-1), polar.block<fsa*4, fsr-1>(0,0);
-
-    for (int i=0; i<Feature::fsa; ++i) {
-        polar.block<1,fsr>(i*4+3, 0) = (polarShifted.block<3,fsr>(i*4, 0) - polar.block<3,fsr>(i*4, 0)).
-            cwiseProduct(diffWeights).colwise().sum();
-    }
+    sampleCircle(0, img, p, 8, 1.0f*scale);
+    sampleCircle(8, img, p, 8, 2.0f*scale);
+    sampleCircle(16, img, p, 16, 4.0f*scale);
+    sampleCircle(32, img, p, 32, 8.0f*scale);
+    sampleCircle(64, img, p, 64, 16.0f*scale);
 }
 
 void Feature::writeToFile(std::ofstream& out) const
 {
-    out.write((char*) (&energy), sizeof(decltype(energy)));
-    out.write((char*) (&firstRadius), sizeof(decltype(firstRadius)));
+    out.write((char*) (&scale), sizeof(decltype(scale)));
     writeMatrixBinary(out, p);
     writeMatrixBinary(out, polar);
 }
 
 void Feature::readFromFile(std::ifstream& in)
 {
-    in.read((char*) (&energy), sizeof(decltype(energy)));
-    in.read((char*) (&firstRadius), sizeof(decltype(firstRadius)));
+    in.read((char*) (&scale), sizeof(decltype(scale)));
     readMatrixBinary(in, p);
     readMatrixBinary(in, polar);
 }
@@ -115,20 +62,30 @@ void Feature::readFromFile(const std::string& filename)
     in.close();
 }
 
-void visualizeFeature(Feature& feature, const std::string& windowName, int scale)
+void Feature::sampleCircle(int firstColId, const Image<Vec3f>& img, const Vec2f& p, int n, float radius)
 {
-    cv::Mat featureImg(Feature::fsr, Feature::fsa*2, CV_32FC3);
-
-    for (int j=0; j<Feature::fsr; ++j) {
-        auto* r = featureImg.ptr<Vec3f>(j);
-        for (int i=0; i<Feature::fsa; ++i) {
-            r[i] = Vec3f(0.5f, 0.5f, 0.5f) + feature.polar.block<3,1>(i*4,j)*0.5f;
-            r[i+Feature::fsa] = Vec3f::Ones()*(0.5f + feature.polar(i*4+3,j)*0.5f);
+    const float angleStep = (2.0*M_PI)/n;
+    for (int i=0; i<n; ++i) {
+        Vec2f pp = p + Vec2f(std::cos(i*angleStep), std::sin(i*angleStep))*radius;
+        for (int j=0; j<fsd; ++j) {
+            polar.block<3,1>(j*9, firstColId+i) = img.sampleCubic(pp, j);
+            polar.block<3,1>(j*9+3, firstColId+i) = img.sampleCubicXDeriv(pp, j);
+            polar.block<3,1>(j*9+6, firstColId+i) = img.sampleCubicYDeriv(pp, j);
         }
     }
+}
 
-    if (scale > 1)
-        cv::resize(featureImg, featureImg, cv::Size(0,0), scale, scale, cv::INTER_NEAREST);
+void visualizeFeature(Feature& feature, const std::string& windowName, int scale)
+{
+    cv::Mat featureImg(
+        Feature::Polar::ColsAtCompileTime, Feature::Polar::RowsAtCompileTime/3,
+        CV_32FC3, feature.polar.data());
 
-    cv::imshow(windowName, featureImg);
+    if (scale > 1) {
+        cv::Mat featureImg2;
+        cv::resize(featureImg, featureImg2, cv::Size(0, 0), scale, scale, cv::INTER_NEAREST);
+        cv::imshow(windowName, featureImg2);
+    }
+    else
+        cv::imshow(windowName, featureImg);
 }

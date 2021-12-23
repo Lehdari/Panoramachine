@@ -15,6 +15,8 @@
 #include "MathTypes.hpp"
 #include "Utils.hpp"
 
+#include <omp.h>
+
 
 // Hyperbolic tangent activation
 struct ActivationTanh
@@ -104,6 +106,7 @@ struct OptimizerAdam : public Optimizer<OptimizerAdam, T_Weights>
     template <typename T_Scalar>
     OptimizerAdam(T_Scalar initAmplitude = 1.0) :
         Optimizer<OptimizerAdam, T_Weights>(initAmplitude),
+        wgt (omp_get_max_threads(), T_Weights::Zero()),
         wg  (T_Weights::Zero()),
         wm  (T_Weights::Zero()),
         wv  (T_Weights::Zero()),
@@ -111,6 +114,11 @@ struct OptimizerAdam : public Optimizer<OptimizerAdam, T_Weights>
     {
         this->w.template block<T_Weights::RowsAtCompileTime,1>(0,T_Weights::ColsAtCompileTime-1) =
             Eigen::Matrix<T_Scalar,T_Weights::RowsAtCompileTime,1>::Zero();
+    }
+
+    inline void addGradientParallel(const T_Weights& g)
+    {
+        wgt[omp_get_thread_num()] += g;
     }
 
     template <typename T_Scalar>
@@ -123,6 +131,9 @@ struct OptimizerAdam : public Optimizer<OptimizerAdam, T_Weights>
         const T_Scalar epsilon = 1.0e-8;
         ++t;
 
+        for (auto& wgtt : wgt)
+            wg += wgtt;
+
         wm = momentum*wm + (1.0-momentum)*wg; // update first moment
         wv = momentum*wv + (1.0-momentum2)*(wg.array().square().matrix()); // update second moment
 
@@ -134,9 +145,12 @@ struct OptimizerAdam : public Optimizer<OptimizerAdam, T_Weights>
         if (weightDecay >= epsilon) // weight decay
             this->w.noalias() = this->w*(1.0-weightDecay);
 
+        for (auto& wgtt : wgt)
+            wgtt = T_Weights::Zero();
         wg = T_Weights::Zero();
     }
 
+    std::vector<T_Weights, Eigen::aligned_allocator<T_Weights>> wgt;
     T_Weights   wg; // gradient
     T_Weights   wm; // first moment
     T_Weights   wv; // second moment
@@ -174,7 +188,8 @@ public:
         T_Activation&& activation = T_Activation()) :
         _activation (activation),
         _optimizer  (std::make_shared<T_Optimizer<Weights>>(initAmplitude)),
-        _input      (InputExtended::Ones())
+        _input      (omp_get_max_threads(), InputExtended::Ones()),
+        _weighed    (omp_get_max_threads(), Output::Ones())
     {
     }
 
@@ -183,21 +198,22 @@ public:
         const std::shared_ptr<T_Optimizer<Weights>>& optimizer) :
         _activation (activation),
         _optimizer  (optimizer),
-        _input      (InputExtended::Ones())
+        _input      (omp_get_max_threads(), InputExtended::Ones()),
+        _weighed    (omp_get_max_threads(), Output::Ones())
     {
     }
 
     inline Output operator()(const Input& x)
     {
-        _input.template block<T_InputRows,1>(0,0) = x;
-        _weighed = _optimizer->w * _input;
-        return _activation.activation(_weighed);
+        _input[omp_get_thread_num()].template block<T_InputRows,1>(0,0) = x;
+        _weighed[omp_get_thread_num()] = _optimizer->w * _input[omp_get_thread_num()];
+        return _activation.activation(_weighed[omp_get_thread_num()]);
     }
 
     inline Input backpropagate(const Output& g)
     {
-        Output ag = _activation.gradient(_weighed).cwiseProduct(g);
-        _optimizer->wg += ag * _input.transpose();
+        Output ag = _activation.gradient(_weighed[omp_get_thread_num()]).cwiseProduct(g);
+        _optimizer->addGradientParallel(ag * _input[omp_get_thread_num()].transpose());
         return _optimizer->w.template block<T_OutputRows, T_InputRows>(0,0).transpose() * ag;
     }
 
@@ -216,8 +232,8 @@ public:
 private:
     T_Activation                            _activation;
     std::shared_ptr<T_Optimizer<Weights>>   _optimizer;
-    InputExtended                           _input; // last input
-    Output                                  _weighed; // weights * input
+    std::vector<InputExtended, Eigen::aligned_allocator<InputExtended>> _input; // last input
+    std::vector<Output, Eigen::aligned_allocator<Output>>               _weighed; // weights * input
 };
 
 
@@ -235,7 +251,8 @@ public:
         T_Activation&& activation = T_Activation()) :
         _activation (activation),
         _optimizer  (std::make_shared<T_Optimizer<Weights>>(initAmplitude)),
-        _input      (InputModified::Ones())
+        _input      (omp_get_max_threads(), InputModified::Ones()),
+        _weighed    (omp_get_max_threads(), Output::Ones())
     {
     }
 
@@ -244,22 +261,23 @@ public:
         const std::shared_ptr<T_Optimizer<Weights>>& optimizer) :
         _activation (activation),
         _optimizer  (optimizer),
-        _input      (InputModified::Ones())
+        _input      (omp_get_max_threads(), InputModified::Ones()),
+        _weighed    (omp_get_max_threads(), Output::Ones())
     {
     }
 
     inline Output operator()(const Input& x)
     {
-        _input.template block<2*T_InputRows,T_InputCols/2>(0,0) =
+        _input[omp_get_thread_num()].template block<2*T_InputRows,T_InputCols/2>(0,0) =
             Eigen::Map<const Eigen::Matrix<T_Scalar, 2*T_InputRows, T_InputCols/2>>(x.data());
-        _weighed = _optimizer->w * _input;
-        return _activation.activation(_weighed);
+        _weighed[omp_get_thread_num()] = _optimizer->w * _input[omp_get_thread_num()];
+        return _activation.activation(_weighed[omp_get_thread_num()]);
     }
 
     inline Input backpropagate(const Output& g)
     {
-        Output ag = _activation.gradient(_weighed).cwiseProduct(g);
-        _optimizer->wg += ag * _input.transpose();
+        Output ag = _activation.gradient(_weighed[omp_get_thread_num()]).cwiseProduct(g);
+        _optimizer->addGradientParallel(ag * _input[omp_get_thread_num()].transpose());
         Eigen::Matrix<T_Scalar, 2*T_InputRows, T_InputCols/2> igModified =
             _optimizer->w.template block<T_OutputRows, 2*T_InputRows>(0,0).transpose() * ag;
         Input ig = Eigen::Map<Eigen::Matrix<T_Scalar, T_InputRows,T_InputCols>>(igModified.data());
@@ -281,8 +299,8 @@ public:
 private:
     T_Activation                            _activation;
     std::shared_ptr<T_Optimizer<Weights>>   _optimizer;
-    InputModified                           _input; // last input
-    Output                                  _weighed; // weights * input
+    std::vector<InputModified, Eigen::aligned_allocator<InputModified>> _input; // last input
+    std::vector<Output, Eigen::aligned_allocator<Output>>               _weighed; // weights * input
 };
 
 template <typename T_Scalar, typename T_Activation, template <typename> class T_Optimizer,
@@ -299,7 +317,8 @@ public:
         T_Activation&& activation = T_Activation()) :
         _activation (activation),
         _optimizer  (std::make_shared<T_Optimizer<Weights>>(initAmplitude)),
-        _input      (InputExtended::Ones())
+        _input      (omp_get_max_threads(), InputExtended::Ones()),
+        _weighed    (omp_get_max_threads(), Output::Ones())
     {
     }
 
@@ -308,21 +327,22 @@ public:
         const std::shared_ptr<T_Optimizer<Weights>>& optimizer) :
         _activation (activation),
         _optimizer  (optimizer),
-        _input      (InputExtended::Ones())
+        _input      (omp_get_max_threads(), InputExtended::Ones()),
+        _weighed    (omp_get_max_threads(), Output::Ones())
     {
     }
 
     inline Output operator()(const Input& x)
     {
-        _input.template block<T_InputRows,T_InputCols>(0,0) = x;
-        _weighed = _optimizer->w * _input;
-        return _activation.activation(_weighed);
+        _input[omp_get_thread_num()].template block<T_InputRows,T_InputCols>(0,0) = x;
+        _weighed[omp_get_thread_num()] = _optimizer->w * _input[omp_get_thread_num()];
+        return _activation.activation(_weighed[omp_get_thread_num()]);
     }
 
     inline Input backpropagate(const Output& g)
     {
-        Output ag = _activation.gradient(_weighed).cwiseProduct(g);
-        _optimizer->wg += ag * _input.transpose();
+        Output ag = _activation.gradient(_weighed[omp_get_thread_num()]).cwiseProduct(g);
+        _optimizer->addGradientParallel(ag * _input[omp_get_thread_num()].transpose());
         return _optimizer->w.template block<T_OutputRows, T_InputRows>(0,0).transpose() * ag;
     }
 
@@ -341,8 +361,8 @@ public:
 private:
     T_Activation                            _activation;
     std::shared_ptr<T_Optimizer<Weights>>   _optimizer;
-    InputExtended                           _input; // last input
-    Output                                  _weighed; // weights * input
+    std::vector<InputExtended, Eigen::aligned_allocator<InputExtended>> _input; // last input
+    std::vector<Output, Eigen::aligned_allocator<Output>>               _weighed; // weights * input
 };
 
 

@@ -43,7 +43,7 @@ using TrainingImages = std::vector<TrainingImage>;
 struct TrainingEntry {
     Feature f1;
     Feature f2;
-    float   diff;
+    Vec3f   label;  // pos diff in x/y (divided by feature max radius * f1 scale), scale diff (f2 scale / f1 scale)
 
     void writeToFile(const std::string& filename) const;
     void readFromFile(const std::string& filename);

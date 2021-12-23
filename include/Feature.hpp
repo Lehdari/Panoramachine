@@ -19,20 +19,17 @@
 
 
 struct Feature {
-    static constexpr int fsa = 32; // feature axial size (in pixels)
-    static constexpr int fsr = 128; // feature radial size (in pixels)
-    static constexpr double frm = 1.1387886347566; // feature radius multiplier
-    static constexpr double fmr = 64.0; // max radius ratio to firstRadius, frm^fsa
+    static constexpr int fsn = 128; // number of samples in feature
+    static constexpr int fsd = 10; // feature sampling depth (in n. of layers)
+    static constexpr double fmr = 16.0; // feature max radius
 
-    using Polar = Eigen::Matrix<float, fsa*4, fsr>;
+    using Polar = Eigen::Matrix<float, 9*fsd, fsn>;
     Polar   polar;
-    double  energy;
     Vec2f   p;
-    float   firstRadius;
+    float   scale;
 
     Feature();
-    Feature(const cv::Mat& img, const Vec2f& p, float firstRadius, float rotation=0.0f);
-    Feature(const Image<Vec3f>& img, const Vec2f& p, float firstRadius, float rotation=0.0f);
+    Feature(const Image<Vec3f>& img, const Vec2f& p, float scale);
 
     void writeToFile(std::ofstream& out) const;
     void readFromFile(std::ifstream& in);
@@ -41,7 +38,7 @@ struct Feature {
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 private:
-    void computeDiffAndEnergy();
+    void sampleCircle(int firstColId, const Image<Vec3f>& img, const Vec2f& p, int n, float radius);
 };
 
 

@@ -18,7 +18,7 @@
 #include <opencv2/imgproc.hpp>
 
 
-#define RND ((rnd()%1000001)*0.000001)
+#define RND ((rnd()%1000000)*0.000001)
 #define RANGE(MIN, MAX) (decltype(MIN))(MIN+RND*(MAX-MIN))
 
 
@@ -53,8 +53,8 @@ void TrainingImage::create(Image<Vec3f>&& image,
 
         distorted.push_back(std::move(distortImage(original, settings)));
 
-        float bbase = RND*1.4f-0.7f;
-        float cbase = RND*1.4f-0.7f;
+        float bbase = RND*0.4f-0.2f;
+        float cbase = RND*0.4f-0.2f;
         brightnessContrast(distorted.back().distorted,
             Vec3f(bbase+RND*0.1f-0.05f, bbase+RND*0.1f-0.05f, bbase+RND*0.1f-0.05f),
             Vec3f(cbase+RND*0.1f-0.05f, cbase+RND*0.1f-0.05f, cbase+RND*0.1f-0.05f));
@@ -115,7 +115,7 @@ bool TrainingImage::read(const std::string& stem, int nDistorted)
 void TrainingEntry::writeToFile(const std::string& filename) const
 {
     std::ofstream out(filename, std::ios::out | std::ios::binary | std::ios::trunc);
-    out.write((char*) (&diff), sizeof(decltype(diff)));
+    writeMatrixBinary(out, label);
     f1.writeToFile(out);
     f2.writeToFile(out);
     out.close();
@@ -124,12 +124,12 @@ void TrainingEntry::writeToFile(const std::string& filename) const
 void TrainingEntry::readFromFile(const std::string& filename)
 {
     std::ifstream in(filename, std::ios::in | std::ios::binary);
-    in.read((char*) (&diff), sizeof(decltype(diff)));
+    readMatrixBinary(in, label);
     f1.readFromFile(in);
     f2.readFromFile(in);
     in.close();
 }
-
+#if 0
 Feature sampleMaxEnergy(
     const Image<Vec3f>& img,
     int nSamples,
@@ -149,7 +149,7 @@ Feature sampleMaxEnergy(
     }
     return f;
 }
-
+#endif
 TrainingEntry makeMatchingTrainingEntry(
     const TrainingImage& trainingImage,
     float diff,
@@ -170,15 +170,16 @@ TrainingEntry makeMatchingTrainingEntry(
     img2 = &trainingImage.distorted[imgSubId2].distorted;
 
     // first (inner) radii for the features
-    float rBase = 4.0*std::pow(Feature::frm, 16.0*RND-8.0); // base radius so the two radii are not ridiculously far from each other
-    float r1 = rBase*std::pow(Feature::frm, 16.0*RND-8.0);
-    float r2 = rBase*std::pow(Feature::frm, 16.0*RND-8.0);
+    float rBase = std::pow(2.0, 6.0*RND-2.0); // base radius so the two radii are not ridiculously far from each other
+    float s1 = rBase*std::pow(2.0, 4.0*RND-2.0);
+    float s2 = rBase*std::pow(2.0, 4.0*RND-2.0);
     // feature separation distance
-    float distance = diff*2.0f*(std::min(r1, r2)*Feature::fmr);
+    float distance = diff*2.0f*(std::min(s1, s2)*Feature::fmr);
 
-    f1 = sampleMaxEnergy(*img1, 10, p1, r1, rnd);
+    p1 << RND*((cv::Mat)(*img1)).cols, RND*((cv::Mat)(*img1)).rows;
+    f1 = Feature(*img1, p1, s1);
     if (imgSubId1 > 0) {// backward map first if first image is distorted
-        p1 += trainingImage.distorted[imgSubId2].backwardMap.at<Vec2f>((int) p1(1), (int) p1(0));
+        p1 += trainingImage.distorted[imgSubId2].backwardMap.at<Vec2f>((int)p1(1), (int)p1(0));
         p1(0) = std::clamp(p1(0), 0.0f, (float)(((cv::Mat)(*img1)).cols-1));
         p1(1) = std::clamp(p1(1), 0.0f, (float)(((cv::Mat)(*img1)).rows-1));
     }
@@ -189,9 +190,11 @@ TrainingEntry makeMatchingTrainingEntry(
     p2 += ddir * distance;
     p2(0) = std::clamp(p2(0), 0.0f, (float)(((cv::Mat)(*img1)).cols-1));
     p2(1) = std::clamp(p2(1), 0.0f, (float)(((cv::Mat)(*img1)).rows-1));
-    f2 = Feature(*img2, p2, r2, RND*M_PI*2.0f);
+    f2 = Feature(*img2, p2, s2);
 
-    return { std::move(f1), std::move(f2), diff };
+    float distanceScale = 1.0f / (Feature::fmr*f1.scale);
+    return { std::move(f1), std::move(f2),
+        Vec3f((p2(0)-p1(0))*distanceScale, p2(1)-p1(1)*distanceScale, f2.scale / f1.scale) };
 }
 
 void generateDataset(TrainingData& trainingData, int datasetSize, const std::string& datasetImagesDirectory)
@@ -232,6 +235,7 @@ void generateDataset(TrainingData& trainingData, int datasetSize, const std::str
         std::string imageStem = datasetImagesDirectory + std::string("/") + entry.path().stem().string();
         TrainingImage trainingImage;
         if (!trainingImage.read(imageStem, nDistorted)) { // create training image if files are not found
+            printf("Existing files not found\n");
             trainingImage.create(readImage<Vec3f>(entry.path()), nDistorted, minSettings, maxSettings);
             trainingImage.write(imageStem);
         }
@@ -281,7 +285,9 @@ void generateDataset(TrainingData& trainingData, int datasetSize, const std::str
         while (swapId == i)
             swapId = rnd()%datasetHalfSize;
         std::swap(trainingData[i].f2, trainingData[swapId].f2);
-        trainingData[i].diff = 1.0f;
+        trainingData[i].label <<
+            trainingData[i].f2.p-trainingData[i].f1.p,
+            trainingData[i].f2.scale/trainingData[i].f1.scale;
     }
     std::shuffle(trainingData.begin(), trainingData.end(), rnd);
 #if 0
@@ -344,6 +350,7 @@ void trainFeatureDetector()
     constexpr int batchesInEpoch = nTrainingBatches + nEvaluationBatches;
     constexpr int nEpochs = 100000;
 
+    std::default_random_engine rnd(1507715517);
 
     TrainingData trainingData;
     const std::string datasetImagesDirectory = "../temp/images";
@@ -358,6 +365,7 @@ void trainFeatureDetector()
         saveDataset(datasetDirectory, trainingData);
     }
     else {
+        printf("Loading dataset...\n");
         loadDataset(datasetDirectory, trainingData, datasetSize);
     }
 
@@ -375,6 +383,7 @@ void trainFeatureDetector()
 #endif
 
     FeatureDetector<OptimizerAdam> detector;
+    detector.loadWeights("../feature_detector_model");
     double minEvaluationLoss = std::numeric_limits<double>::max();
     int epochStartId = 0;
     for (int e=0; e<nEpochs; ++e) {
@@ -393,11 +402,9 @@ void trainFeatureDetector()
         for (int i=0; i<nEvaluationBatches; ++i) {
             auto batch = sampleBatch(trainingData, datasetSize, batchSize);
             for (int j = 0; j < batchSize; ++j) {
-                double l = detector(batch[j]->f1, batch[j]->f2) - batch[j]->diff;
-                if (batch[i]->diff > 0.9f && l > 0.0f)
-                    l = 0.0f;
-                l *= l;
-                evaluationLoss += l;
+                Vec3f g = FeatureDetector<OptimizerAdam>::gradient(
+                    detector(batch[j]->f1, batch[j]->f2), batch[j]->label);
+                evaluationLoss += g.array().square().sum();
             }
         }
 
@@ -409,11 +416,15 @@ void trainFeatureDetector()
             e, trainingLoss, evaluationLoss,
             std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
 
+        detector.printInfo();
+
         if (evaluationLoss < minEvaluationLoss) {
             detector.saveWeights("../feature_detector_model");
             printf("record evaluationLoss, saving\n");
             minEvaluationLoss = evaluationLoss;
         }
+
+        std::shuffle(trainingData.begin(), trainingData.begin()+(nTrainingBatches*batchSize), rnd);
 
         epochStartId += batchesInEpoch*batchSize;
     }

@@ -11,42 +11,53 @@
 
 template <template <typename> class T_Optimizer>
 FeatureDetector<T_Optimizer>::FeatureDetector() :
-    _layer1a(0.1f, ActivationReLU(0.01f)), _layer1b(ActivationReLU(0.01f), _layer1a.getOptimizerPtr()),
-    _layer2a(0.1f, ActivationReLU(0.01f)), _layer2b(ActivationReLU(0.01f), _layer2a.getOptimizerPtr()),
-    _layer3a(0.1f, ActivationReLU(0.01f)), _layer3b(ActivationReLU(0.01f), _layer3a.getOptimizerPtr()),
-    _layer4a(0.1f, ActivationReLU(0.01f)), _layer4b(ActivationReLU(0.01f), _layer4a.getOptimizerPtr()),
-    _layer5a(0.1f, ActivationReLU(0.01f)), _layer5b(ActivationReLU(0.01f), _layer5a.getOptimizerPtr()),
-    _layer6a(0.1f, ActivationReLU(0.01f)), _layer6b(ActivationReLU(0.01f), _layer6a.getOptimizerPtr()),
-    _layer7a(0.1f, ActivationReLU(0.01f)), _layer7b(ActivationReLU(0.01f), _layer7a.getOptimizerPtr()),
-    _layer8a(0.1f, ActivationTanh()), _layer8b(ActivationTanh(), _layer8a.getOptimizerPtr()),
-    _layer9a(0.1f, ActivationTanh()), _layer9b(ActivationTanh(), _layer9a.getOptimizerPtr())
+    _layer1a(0.01f, ActivationReLU(0.01f)), _layer1b(ActivationReLU(0.01f), _layer1a.getOptimizerPtr()),
+    _layer2a(0.01f, ActivationReLU(0.01f)), _layer2b(ActivationReLU(0.01f), _layer2a.getOptimizerPtr()),
+    _layer3(0.01f, ActivationTanh()),
+    _layer4(0.01f, ActivationReLU(0.01f)),
+    _layer5(0.01f, ActivationReLU(0.01f)),
+    _layer6(0.01f, ActivationReLU(0.01f)),
+    _layer7(0.01f, ActivationReLU(0.01f)),
+    _layer8(0.01f, ActivationReLU(0.01f)),
+    _layer9(0.01f, ActivationReLU(0.01f)),
+    _layer10(0.01f, ActivationReLU(0.01f)),
+    _layer11(0.01f, ActivationLinear()),
+    _v1(omp_get_max_threads(), decltype(_v1)::value_type::Zero()),
+    _v2(omp_get_max_threads(), decltype(_v2)::value_type::Zero()),
+    _v3(omp_get_max_threads(), decltype(_v3)::value_type::Zero()),
+    _g(omp_get_max_threads(), decltype(_g)::value_type::Zero()),
+    _g3(omp_get_max_threads(), decltype(_g3)::value_type::Zero())
 {
 }
 
 template <template <typename> class T_Optimizer>
 double FeatureDetector<T_Optimizer>::trainBatch(const TrainingBatch& batch)
 {
-    int n=0;
     double loss = 0.0;
+    #pragma omp parallel for
     for (auto* entry : batch) {
-        loss += trainingPass(entry->f1, entry->f2, entry->diff);
-        ++n;
+        double l = trainingPass(entry->f1, entry->f2, entry->label);
+        #pragma omp critical
+        loss += l;
     }
-    loss /= n;
+    loss /= batch.size();
 
-    constexpr float learningRate = 0.0001f;
-    constexpr float momentum = 0.99f;
+    constexpr float learningRate = 0.00025f;
+    constexpr float momentum = 0.95f;
     constexpr float momentum2 = 0.999f;
-    constexpr float weightDecay = 0.0005f;
+    constexpr float weightDecay = 0.0f;
+
     _layer1a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
     _layer2a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
-    _layer3a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
-    _layer4a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
-    _layer5a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
-    _layer6a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
-    _layer7a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
-    _layer8a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
-    _layer9a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer3.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer4.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer5.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer6.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer7.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer8.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer9.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer10.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
+    _layer11.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
     // no need to call for b-layers since the weights are shared
 
     return loss;
@@ -57,13 +68,15 @@ void FeatureDetector<T_Optimizer>::saveWeights(const std::string& directory)
 {
     _layer1a.getOptimizer()->saveWeights(directory + "/layer1.bin");
     _layer2a.getOptimizer()->saveWeights(directory + "/layer2.bin");
-    _layer3a.getOptimizer()->saveWeights(directory + "/layer3.bin");
-    _layer4a.getOptimizer()->saveWeights(directory + "/layer4.bin");
-    _layer5a.getOptimizer()->saveWeights(directory + "/layer5.bin");
-    _layer6a.getOptimizer()->saveWeights(directory + "/layer6.bin");
-    _layer7a.getOptimizer()->saveWeights(directory + "/layer7.bin");
-    _layer8a.getOptimizer()->saveWeights(directory + "/layer8.bin");
-    _layer9a.getOptimizer()->saveWeights(directory + "/layer9.bin");
+    _layer3.getOptimizer()->saveWeights(directory + "/layer3.bin");
+    _layer4.getOptimizer()->saveWeights(directory + "/layer4.bin");
+    _layer5.getOptimizer()->saveWeights(directory + "/layer5.bin");
+    _layer6.getOptimizer()->saveWeights(directory + "/layer6.bin");
+    _layer7.getOptimizer()->saveWeights(directory + "/layer7.bin");
+    _layer8.getOptimizer()->saveWeights(directory + "/layer8.bin");
+    _layer9.getOptimizer()->saveWeights(directory + "/layer9.bin");
+    _layer10.getOptimizer()->saveWeights(directory + "/layer10.bin");
+    _layer11.getOptimizer()->saveWeights(directory + "/layer11.bin");
 }
 
 template <template <typename> class T_Optimizer>
@@ -71,60 +84,104 @@ void FeatureDetector<T_Optimizer>::loadWeights(const std::string& directory)
 {
     _layer1a.getOptimizer()->loadWeights(directory + "/layer1.bin");
     _layer2a.getOptimizer()->loadWeights(directory + "/layer2.bin");
-    _layer3a.getOptimizer()->loadWeights(directory + "/layer3.bin");
-    _layer4a.getOptimizer()->loadWeights(directory + "/layer4.bin");
-    _layer5a.getOptimizer()->loadWeights(directory + "/layer5.bin");
-    _layer6a.getOptimizer()->loadWeights(directory + "/layer6.bin");
-    _layer7a.getOptimizer()->loadWeights(directory + "/layer7.bin");
-    _layer8a.getOptimizer()->loadWeights(directory + "/layer8.bin");
-    _layer9a.getOptimizer()->loadWeights(directory + "/layer9.bin");
+    _layer3.getOptimizer()->loadWeights(directory + "/layer3.bin");
+    _layer4.getOptimizer()->loadWeights(directory + "/layer4.bin");
+    _layer5.getOptimizer()->loadWeights(directory + "/layer5.bin");
+    _layer6.getOptimizer()->loadWeights(directory + "/layer6.bin");
+    _layer7.getOptimizer()->loadWeights(directory + "/layer7.bin");
+    _layer8.getOptimizer()->loadWeights(directory + "/layer8.bin");
+    _layer9.getOptimizer()->loadWeights(directory + "/layer9.bin");
+    _layer10.getOptimizer()->loadWeights(directory + "/layer10.bin");
+    _layer11.getOptimizer()->loadWeights(directory + "/layer11.bin");
 }
 
 template <template <typename> class T_Optimizer>
-float FeatureDetector<T_Optimizer>::operator()(const Feature& f1, const Feature& f2)
+void FeatureDetector<T_Optimizer>::printInfo()
 {
-    _v1 = _layer9a(_layer8a(_layer7a(_layer6a(_layer5a(_layer4a(_layer3a(_layer2a(_layer1a(f1.polar)))))))));
-    _v2 = _layer9b(_layer8b(_layer7b(_layer6b(_layer5b(_layer4b(_layer3b(_layer2b(_layer1b(f2.polar)))))))));
-    _diff = _v1-_v2;
-    return _diff.norm();
+    printf("layer1 max w abs: %0.5f\n", _layer1a.getOptimizer()->w.cwiseAbs().maxCoeff());
+    printf("layer2 max w abs: %0.5f\n", _layer2a.getOptimizer()->w.cwiseAbs().maxCoeff());
+    printf("layer3 max w abs: %0.5f\n", _layer3.getOptimizer()->w.cwiseAbs().maxCoeff());
+    printf("layer4 max w abs: %0.5f\n", _layer4.getOptimizer()->w.cwiseAbs().maxCoeff());
+    printf("layer5 max w abs: %0.5f\n", _layer5.getOptimizer()->w.cwiseAbs().maxCoeff());
+    printf("layer6 max w abs: %0.5f\n", _layer6.getOptimizer()->w.cwiseAbs().maxCoeff());
+    printf("layer7 max w abs: %0.5f\n", _layer7.getOptimizer()->w.cwiseAbs().maxCoeff());
+    printf("layer8 max w abs: %0.5f\n", _layer8.getOptimizer()->w.cwiseAbs().maxCoeff());
+    printf("layer9 max w abs: %0.5f\n", _layer9.getOptimizer()->w.cwiseAbs().maxCoeff());
+    printf("layer10 max w abs: %0.5f\n", _layer10.getOptimizer()->w.cwiseAbs().maxCoeff());
+    printf("layer11 max w abs: %0.5f\n", _layer11.getOptimizer()->w.cwiseAbs().maxCoeff());
 }
 
 template <template <typename> class T_Optimizer>
-float FeatureDetector<T_Optimizer>::trainingPass(const Feature& f1, const Feature& f2, float targetDiff)
+typename FeatureDetector<T_Optimizer>::LastLayer::Output
+    FeatureDetector<T_Optimizer>::operator()(const Feature& f1, const Feature& f2)
+{
+    _v1[omp_get_thread_num()] = _layer2a(_layer1a(f1.polar));
+    _v2[omp_get_thread_num()] = _layer2b(_layer1b(f2.polar));
+    _v3[omp_get_thread_num()] << _v1[omp_get_thread_num()].transpose(), _v2[omp_get_thread_num()].transpose();
+    return _layer11(_layer10(_layer9(_layer8(_layer7(_layer6(_layer5(_layer4(_layer3(
+        _v3[omp_get_thread_num()])))))))));
+}
+
+template <template <typename> class T_Optimizer>
+typename FeatureDetector<T_Optimizer>::LastLayer::Output
+    FeatureDetector<T_Optimizer>::gradient(
+    const typename LastLayer::Output& pred, const typename LastLayer::Output& label)
+{
+    typename LastLayer::Output g = pred - label;
+    if (g.template block<2, 1>(0, 0).norm() > 2.0f) {
+        g(0) = 0.0f;
+        g(1) = 0.0f;
+    }
+    return g;
+}
+
+
+template <typename T_Matrix>
+T_Matrix& dropoutMask(float zeroRate)
+{
+    static std::vector<T_Matrix, Eigen::aligned_allocator<T_Matrix>> m(omp_get_max_threads(), T_Matrix::Zero());
+    m[omp_get_thread_num()] = (T_Matrix::Random()*0.5f+T_Matrix::Ones()*(1.0f-zeroRate)).array().round().matrix();
+    return m[omp_get_thread_num()];
+}
+
+template <template <typename> class T_Optimizer>
+typename FeatureDetector<T_Optimizer>::LastLayer::Output
+    FeatureDetector<T_Optimizer>::trainingForward(const Feature& f1, const Feature& f2)
+{
+    _v1[omp_get_thread_num()] = _layer2a(_layer1a(f1.polar));
+    _v2[omp_get_thread_num()] = _layer2b(_layer1b(f2.polar));
+    _v3[omp_get_thread_num()] << _v1[omp_get_thread_num()].transpose(), _v2[omp_get_thread_num()].transpose();
+    return _layer11(_layer10(_layer9(_layer8(_layer7(_layer6(_layer5(_layer4(_layer3(
+        _v3[omp_get_thread_num()])))))))));
+}
+
+template <template <typename> class T_Optimizer>
+float FeatureDetector<T_Optimizer>::trainingPass(
+    const Feature& f1, const Feature& f2, const typename LastLayer::Output& label)
 {
     // forward propagate
-    float diffPrediction = operator()(f1, f2);
+    typename LastLayer::Output pred = trainingForward(f1, f2);
 
-    // loss
-    float loss = diffPrediction - targetDiff;
-    if (targetDiff > 0.9 && loss > 0.0)
-        loss = 0.0;
-    else {
+    // backpropagate
+    _g[omp_get_thread_num()] = gradient(pred, label);
 
-        // backpropagate
-        constexpr float epsilon = 1.0e-8f; // epsilon to prevent division by zero
-        _g = (loss*_diff)/(diffPrediction+epsilon); // initial gradient over distance function
+    //printf("pred: %12.8f %12.8f %12.8f label: %12.8f %12.8f %12.8f grad: %12.8f %12.8f %12.8f\n",
+    //    pred(0), pred(1), pred(2), label(0), label(1), label(2), _g(0), _g(1), _g(2));
 
-        _layer1a.backpropagate(
-        _layer2a.backpropagate(
-        _layer3a.backpropagate(
-        _layer4a.backpropagate(
-        _layer5a.backpropagate(
-        _layer6a.backpropagate(
-        _layer7a.backpropagate(
-        _layer8a.backpropagate(
-        _layer9a.backpropagate(_g)))))))));
+    _g3[omp_get_thread_num()] = _layer3.backpropagate(
+    _layer4.backpropagate(
+    _layer5.backpropagate(
+    _layer6.backpropagate(
+    _layer7.backpropagate(
+    _layer8.backpropagate(
+    _layer9.backpropagate(
+    _layer10.backpropagate(
+    _layer11.backpropagate(_g[omp_get_thread_num()])))))))));
 
-        _layer1b.backpropagate(
-        _layer2b.backpropagate(
-        _layer3b.backpropagate(
-        _layer4b.backpropagate(
-        _layer5b.backpropagate(
-        _layer6b.backpropagate(
-        _layer7b.backpropagate(
-        _layer8b.backpropagate(
-        _layer9b.backpropagate(-_g))))))))); // apply negative gradient to b branch (negated to form diff)
-    }
+    _layer1a.backpropagate(
+    _layer2a.backpropagate(_g3[omp_get_thread_num()].template block<Feature::fsn, 64>(0,0).transpose()));
+    _layer1b.backpropagate(
+    _layer2b.backpropagate(_g3[omp_get_thread_num()].template block<Feature::fsn, 64>(Feature::fsn,0).transpose()));
 
-    return loss*loss;
+    return _g[omp_get_thread_num()].array().square().sum();
 }

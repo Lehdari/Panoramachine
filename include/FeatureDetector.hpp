@@ -18,44 +18,58 @@
 
 template <template <typename> class T_Optimizer>
 class FeatureDetector {
+private:
+    using Layer1 = LayerConv<float, ActivationReLU, T_Optimizer, 9*Feature::fsd, Feature::fsn, 64>;
+    using Layer2 = LayerConv<float, ActivationReLU, T_Optimizer, 64, Feature::fsn, 64>;
+    using Layer3 = LayerMerge<float, ActivationTanh, T_Optimizer, Feature::fsn*2, 64, 32>;
+    using Layer4 = LayerMerge<float, ActivationReLU, T_Optimizer, 32, 32, 32>;
+    using Layer5 = LayerMerge<float, ActivationReLU, T_Optimizer, 32, 16, 32>;
+    using Layer6 = LayerMerge<float, ActivationReLU, T_Optimizer, 32, 8, 32>;
+    using Layer7 = LayerMerge<float, ActivationReLU, T_Optimizer, 32, 4, 64>;
+    using Layer8 = LayerMerge<float, ActivationReLU, T_Optimizer, 64, 2, 128>;
+    using Layer9 = LayerDense<float, ActivationReLU, T_Optimizer, 128, 64>;
+    using Layer10 = LayerDense<float, ActivationReLU, T_Optimizer, 64, 32>;
+    using Layer11 = LayerDense<float, ActivationLinear, T_Optimizer, 32, 3>;
+    using LastLayer = Layer11;
+
+    Layer1  _layer1a, _layer1b;
+    Layer2  _layer2a, _layer2b;
+    Layer3  _layer3;
+    Layer4  _layer4;
+    Layer5  _layer5;
+    Layer6  _layer6;
+    Layer7  _layer7;
+    Layer8  _layer8;
+    Layer9  _layer9;
+    Layer10 _layer10;
+    Layer11 _layer11;
+
+    std::vector<typename Layer2::Output, Eigen::aligned_allocator<typename Layer2::Output>>         _v1;
+    std::vector<typename Layer2::Output, Eigen::aligned_allocator<typename Layer2::Output>>         _v2;
+    std::vector<typename Layer3::Input, Eigen::aligned_allocator<typename Layer3::Input>>           _v3;
+    std::vector<typename LastLayer::Output, Eigen::aligned_allocator<typename LastLayer::Output>>   _g;
+    std::vector<typename Layer3::Input, Eigen::aligned_allocator<typename Layer3::Input>>           _g3;
+
 public:
     FeatureDetector();
 
     double trainBatch(const TrainingBatch& batch);
     void saveWeights(const std::string& directory);
     void loadWeights(const std::string& directory);
+    void printInfo();
 
-    float operator()(const Feature& f1, const Feature& f2);
+    typename LastLayer::Output operator()(const Feature& f1, const Feature& f2);
+
+    static typename LastLayer::Output gradient(
+        const typename LastLayer::Output& pred, const typename LastLayer::Output& label);
 
 private:
-    using Layer1 = LayerMerge<float, ActivationReLU, T_Optimizer, Feature::fsa*4, Feature::fsr, 64>;
-    using Layer2 = LayerMerge<float, ActivationReLU, T_Optimizer, 64, Feature::fsr/2, 64>;
-    using Layer3 = LayerMerge<float, ActivationReLU, T_Optimizer, 64, Feature::fsr/4, 64>;
-    using Layer4 = LayerMerge<float, ActivationReLU, T_Optimizer, 64, Feature::fsr/8, 64>;
-    using Layer5 = LayerMerge<float, ActivationReLU, T_Optimizer, 64, Feature::fsr/16, 64>;
-    using Layer6 = LayerMerge<float, ActivationReLU, T_Optimizer, 64, Feature::fsr/32, 64>;
-    using Layer7 = LayerMerge<float, ActivationReLU, T_Optimizer, 64, Feature::fsr/64, 128>;
-    using Layer8 = LayerDense<float, ActivationTanh, T_Optimizer, 128, 64>;
-    using Layer9 = LayerDense<float, ActivationTanh, T_Optimizer, 64, 32>;
-    using LastLayer = Layer9;
+    typename LastLayer::Output trainingForward(const Feature& f1, const Feature& f2);
+    float trainingPass(const Feature& f1, const Feature& f2, const typename LastLayer::Output& label);
 
-    Layer1  _layer1a, _layer1b;
-    Layer2  _layer2a, _layer2b;
-    Layer3  _layer3a, _layer3b;
-    Layer4  _layer4a, _layer4b;
-    Layer5  _layer5a, _layer5b;
-    Layer6  _layer6a, _layer6b;
-    Layer7  _layer7a, _layer7b;
-    Layer8  _layer8a, _layer8b;
-    Layer9  _layer9a, _layer9b;
-
-    typename LastLayer::Output _v1;
-    typename LastLayer::Output _v2; // feature vectors from a and b branches
-    typename LastLayer::Output _diff; // v1-v2
-    typename LastLayer::Output _g;
-
-    float trainingPass(const Feature& f1, const Feature& f2, float targetDiff);
+    static constexpr float dropoutRate = 0.25f;
 };
+
 
 #include "FeatureDetector.inl"
 
