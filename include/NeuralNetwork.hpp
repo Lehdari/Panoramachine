@@ -81,8 +81,9 @@ private:
 template <template <typename> class T_Optimizer, typename T_Weights>
 struct Optimizer {
     template <typename T_Scalar>
-    Optimizer(T_Scalar initAmplitude = 1.0) :
-        w   (T_Weights::Random() * initAmplitude)
+    Optimizer(T_Scalar initAmplitude = 1.0, double dropoutRate = 0.0) :
+        w           (T_Weights::Random() * initAmplitude),
+        dropoutRate (dropoutRate)
     {}
 
     void saveWeights(const std::string& filename)
@@ -95,6 +96,7 @@ struct Optimizer {
         readMatrixBinary(filename, w);
     }
 
+    double      dropoutRate;
     T_Weights   w;
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -104,8 +106,8 @@ template <typename T_Weights>
 struct OptimizerAdam : public Optimizer<OptimizerAdam, T_Weights>
 {
     template <typename T_Scalar>
-    OptimizerAdam(T_Scalar initAmplitude = 1.0) :
-        Optimizer<OptimizerAdam, T_Weights>(initAmplitude),
+    OptimizerAdam(T_Scalar initAmplitude = 1.0, double dropoutRate = 0.0) :
+        Optimizer<OptimizerAdam, T_Weights>(initAmplitude, dropoutRate),
         wgt (omp_get_max_threads(), T_Weights::Zero()),
         wg  (T_Weights::Zero()),
         wm  (T_Weights::Zero()),
@@ -163,7 +165,7 @@ template <typename T_Weights>
 struct OptimizerStatic : public Optimizer<OptimizerStatic, T_Weights>
 {
     template <typename T_Scalar>
-    OptimizerStatic(T_Scalar initAmplitude = 1.0) :
+    OptimizerStatic(T_Scalar initAmplitude = 1.0, double dropoutRate = 0.0) :
         Optimizer<OptimizerStatic, T_Weights>(initAmplitude)
     {
         this->w.template block<T_Weights::RowsAtCompileTime,1>(0,T_Weights::ColsAtCompileTime-1) =
@@ -172,6 +174,34 @@ struct OptimizerStatic : public Optimizer<OptimizerStatic, T_Weights>
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
+
+
+template <typename T_Matrix>
+T_Matrix& random(float amplitude)
+{
+    static std::vector<std::default_random_engine> rnd = [](){
+        std::vector<std::default_random_engine> rnd;
+        rnd.reserve(omp_get_max_threads());
+        for (int i=0; i<omp_get_max_threads(); ++i)
+            rnd.template emplace_back(1507+715517*i);
+        return rnd;
+    }();
+    static std::vector<T_Matrix, Eigen::aligned_allocator<T_Matrix>> m(omp_get_max_threads(), T_Matrix::Zero());
+    for (int j=0; j<T_Matrix::ColsAtCompileTime; ++j) {
+        for (int i=0; i<T_Matrix::RowsAtCompileTime; ++i) {
+            m[omp_get_thread_num()](i, j) = ((int)rnd[omp_get_thread_num()]()%2000001-1000000)*0.000001f*amplitude;
+        }
+    }
+    return m[omp_get_thread_num()];
+}
+
+template <typename T_Matrix>
+T_Matrix& dropoutMask(float zeroRate)
+{
+    static std::vector<T_Matrix, Eigen::aligned_allocator<T_Matrix>> m(omp_get_max_threads(), T_Matrix::Zero());
+    m[omp_get_thread_num()] = (random<T_Matrix>(0.5f)+T_Matrix::Ones()*(1.0f-zeroRate)).array().round().matrix();
+    return m[omp_get_thread_num()];
+}
 
 
 template <typename T_Scalar, typename T_Activation, template <typename> class T_Optimizer,
@@ -185,9 +215,10 @@ public:
     using Weights = Eigen::Matrix<T_Scalar, T_OutputRows, T_InputRows+1>;
 
     LayerDense(T_Scalar initAmplitude = 1.0,
-        T_Activation&& activation = T_Activation()) :
+        T_Activation&& activation = T_Activation(),
+        double dropoutRate = 0.0) :
         _activation (activation),
-        _optimizer  (std::make_shared<T_Optimizer<Weights>>(initAmplitude)),
+        _optimizer  (std::make_shared<T_Optimizer<Weights>>(initAmplitude, dropoutRate)),
         _input      (omp_get_max_threads(), InputExtended::Ones()),
         _weighed    (omp_get_max_threads(), Output::Ones())
     {
@@ -205,7 +236,15 @@ public:
 
     inline Output operator()(const Input& x)
     {
-        _input[omp_get_thread_num()].template block<T_InputRows,1>(0,0) = x;
+        _input[omp_get_thread_num()].template block<T_InputRows,1>(0,0) = x*(1.0f-(float)_optimizer->dropoutRate);
+        _weighed[omp_get_thread_num()] = _optimizer->w * _input[omp_get_thread_num()];
+        return _activation.activation(_weighed[omp_get_thread_num()]);
+    }
+
+    inline Output trainingForward(const Input& x)
+    {
+        _input[omp_get_thread_num()].template block<T_InputRows,1>(0,0) = x.
+            template cwiseProduct(dropoutMask<Input>((float)_optimizer->dropoutRate));
         _weighed[omp_get_thread_num()] = _optimizer->w * _input[omp_get_thread_num()];
         return _activation.activation(_weighed[omp_get_thread_num()]);
     }
@@ -248,9 +287,10 @@ public:
     using Weights = Eigen::Matrix<T_Scalar, T_OutputRows, 2*T_InputRows+1>;
 
     LayerMerge(T_Scalar initAmplitude = 1.0,
-        T_Activation&& activation = T_Activation()) :
+        T_Activation&& activation = T_Activation(),
+        double dropoutRate = 0.0) :
         _activation (activation),
-        _optimizer  (std::make_shared<T_Optimizer<Weights>>(initAmplitude)),
+        _optimizer  (std::make_shared<T_Optimizer<Weights>>(initAmplitude, dropoutRate)),
         _input      (omp_get_max_threads(), InputModified::Ones()),
         _weighed    (omp_get_max_threads(), Output::Ones())
     {
@@ -268,8 +308,18 @@ public:
 
     inline Output operator()(const Input& x)
     {
+        Input xx = x*(1.0f-(float)_optimizer->dropoutRate);
         _input[omp_get_thread_num()].template block<2*T_InputRows,T_InputCols/2>(0,0) =
-            Eigen::Map<const Eigen::Matrix<T_Scalar, 2*T_InputRows, T_InputCols/2>>(x.data());
+            Eigen::Map<const Eigen::Matrix<T_Scalar, 2*T_InputRows, T_InputCols/2>>(xx.data());
+        _weighed[omp_get_thread_num()] = _optimizer->w * _input[omp_get_thread_num()];
+        return _activation.activation(_weighed[omp_get_thread_num()]);
+    }
+
+    inline Output trainingForward(const Input& x)
+    {
+        Input xx = x.template cwiseProduct(dropoutMask<Input>((float)_optimizer->dropoutRate));
+        _input[omp_get_thread_num()].template block<2*T_InputRows,T_InputCols/2>(0,0) =
+            Eigen::Map<const Eigen::Matrix<T_Scalar, 2*T_InputRows, T_InputCols/2>>(xx.data());
         _weighed[omp_get_thread_num()] = _optimizer->w * _input[omp_get_thread_num()];
         return _activation.activation(_weighed[omp_get_thread_num()]);
     }
@@ -314,9 +364,10 @@ public:
     using Weights = Eigen::Matrix<T_Scalar, T_OutputRows, T_InputRows+1>;
 
     LayerConv(T_Scalar initAmplitude = 1.0,
-        T_Activation&& activation = T_Activation()) :
+        T_Activation&& activation = T_Activation(),
+        double dropoutRate = 0.0) :
         _activation (activation),
-        _optimizer  (std::make_shared<T_Optimizer<Weights>>(initAmplitude)),
+        _optimizer  (std::make_shared<T_Optimizer<Weights>>(initAmplitude, dropoutRate)),
         _input      (omp_get_max_threads(), InputExtended::Ones()),
         _weighed    (omp_get_max_threads(), Output::Ones())
     {
@@ -334,7 +385,16 @@ public:
 
     inline Output operator()(const Input& x)
     {
-        _input[omp_get_thread_num()].template block<T_InputRows,T_InputCols>(0,0) = x;
+        _input[omp_get_thread_num()].template block<T_InputRows,T_InputCols>(0,0) =
+            x*(1.0f-(float)_optimizer->dropoutRate);
+        _weighed[omp_get_thread_num()] = _optimizer->w * _input[omp_get_thread_num()];
+        return _activation.activation(_weighed[omp_get_thread_num()]);
+    }
+
+    inline Output trainingForward(const Input& x)
+    {
+        _input[omp_get_thread_num()].template block<T_InputRows,T_InputCols>(0,0) = x.
+            template cwiseProduct(dropoutMask<Input>((float)_optimizer->dropoutRate));
         _weighed[omp_get_thread_num()] = _optimizer->w * _input[omp_get_thread_num()];
         return _activation.activation(_weighed[omp_get_thread_num()]);
     }
