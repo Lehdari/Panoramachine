@@ -391,8 +391,6 @@ void trainFeatureDetector()
     double minEvaluationLoss = std::numeric_limits<double>::max();
     int epochStartId = 0;
     for (int e=0; e<nEpochs; ++e) {
-        Eigen::internal::set_is_malloc_allowed(false); // safeguard for detecting unwanted allocations during training
-
         auto t1 = std::chrono::high_resolution_clock::now();
         double trainingLoss = 0.0;
         for (int i=0; i<nTrainingBatches; ++i) {
@@ -413,8 +411,6 @@ void trainFeatureDetector()
         }
 
         evaluationLoss /= batchSize*nEvaluationBatches;
-
-        Eigen::internal::set_is_malloc_allowed(true);
 
         printf("Epoch %d finished, trainingLoss: %13.10f, evaluationLoss: %13.10f, best: %13.10f time: %ld\n",
             e, trainingLoss, evaluationLoss, minEvaluationLoss,
