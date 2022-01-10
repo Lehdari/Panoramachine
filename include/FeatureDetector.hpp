@@ -21,15 +21,15 @@ class FeatureDetector {
 private:
     using Layer1 = LayerConv<float, ActivationReLU, T_Optimizer, 9*Feature::fsd, Feature::fsn, 64>;
     using Layer2 = LayerConv<float, ActivationReLU, T_Optimizer, 64, Feature::fsn, 64>;
-    using Layer3 = LayerMerge<float, ActivationTanh, T_Optimizer, Feature::fsn*2, 64, 32>;
-    using Layer4 = LayerMerge<float, ActivationReLU, T_Optimizer, 32, 32, 32>;
-    using Layer5 = LayerMerge<float, ActivationReLU, T_Optimizer, 32, 16, 32>;
-    using Layer6 = LayerMerge<float, ActivationReLU, T_Optimizer, 32, 8, 32>;
-    using Layer7 = LayerMerge<float, ActivationReLU, T_Optimizer, 32, 4, 64>;
+    using Layer3 = LayerMerge<float, ActivationReLU, T_Optimizer, Feature::fsn*2, 64, 64>;
+    using Layer4 = LayerMerge<float, ActivationReLU, T_Optimizer, 64, 32, 64>;
+    using Layer5 = LayerMerge<float, ActivationReLU, T_Optimizer, 64, 16, 64>;
+    using Layer6 = LayerMerge<float, ActivationReLU, T_Optimizer, 64, 8, 64>;
+    using Layer7 = LayerMerge<float, ActivationReLU, T_Optimizer, 64, 4, 64>;
     using Layer8 = LayerMerge<float, ActivationReLU, T_Optimizer, 64, 2, 128>;
-    using Layer9 = LayerDense<float, ActivationReLU, T_Optimizer, 128, 64>;
-    using Layer10 = LayerDense<float, ActivationReLU, T_Optimizer, 64, 32>;
-    using Layer11 = LayerDense<float, ActivationLinear, T_Optimizer, 32, 3>;
+    using Layer9 = LayerDense<float, ActivationReLU, T_Optimizer, 128, 128>;
+    using Layer10 = LayerDense<float, ActivationReLU, T_Optimizer, 128, 64>;
+    using Layer11 = LayerDense<float, ActivationLinear, T_Optimizer, 64, 3>;
     using LastLayer = Layer11;
 
     Layer1  _layer1a, _layer1b;
@@ -51,7 +51,7 @@ private:
     std::vector<typename Layer3::Input, Eigen::aligned_allocator<typename Layer3::Input>>           _g3;
 
 public:
-    FeatureDetector();
+    FeatureDetector(double dropoutRate = 0.0);
 
     double trainBatch(const TrainingBatch& batch);
     void saveWeights(const std::string& directory);
@@ -66,8 +66,6 @@ public:
 private:
     typename LastLayer::Output trainingForward(const Feature& f1, const Feature& f2);
     float trainingPass(const Feature& f1, const Feature& f2, const typename LastLayer::Output& label);
-
-    static constexpr float dropoutRate = 0.25f;
 };
 
 

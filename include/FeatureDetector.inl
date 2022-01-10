@@ -10,16 +10,16 @@
 
 
 template <template <typename> class T_Optimizer>
-FeatureDetector<T_Optimizer>::FeatureDetector() :
-    _layer1a(0.01f, ActivationReLU(0.01f)), _layer1b(ActivationReLU(0.01f), _layer1a.getOptimizerPtr()),
-    _layer2a(0.01f, ActivationReLU(0.01f)), _layer2b(ActivationReLU(0.01f), _layer2a.getOptimizerPtr()),
-    _layer3(0.01f, ActivationTanh()),
-    _layer4(0.01f, ActivationReLU(0.01f)),
-    _layer5(0.01f, ActivationReLU(0.01f)),
-    _layer6(0.01f, ActivationReLU(0.01f)),
-    _layer7(0.01f, ActivationReLU(0.01f)),
-    _layer8(0.01f, ActivationReLU(0.01f)),
-    _layer9(0.01f, ActivationReLU(0.01f)),
+FeatureDetector<T_Optimizer>::FeatureDetector(double dropoutRate) :
+    _layer1a(0.01f, ActivationReLU(0.01f), dropoutRate), _layer1b(ActivationReLU(0.01f), _layer1a.getOptimizerPtr()),
+    _layer2a(0.01f, ActivationReLU(0.01f), dropoutRate), _layer2b(ActivationReLU(0.01f), _layer2a.getOptimizerPtr()),
+    _layer3(0.01f, ActivationReLU(0.01f), dropoutRate),
+    _layer4(0.01f, ActivationReLU(0.01f), dropoutRate/2.0f),
+    _layer5(0.01f, ActivationReLU(0.01f), dropoutRate/2.0f),
+    _layer6(0.01f, ActivationReLU(0.01f), dropoutRate/2.0f),
+    _layer7(0.01f, ActivationReLU(0.01f), dropoutRate/4.0f),
+    _layer8(0.01f, ActivationReLU(0.01f), dropoutRate/4.0f),
+    _layer9(0.01f, ActivationReLU(0.01f), dropoutRate/4.0f),
     _layer10(0.01f, ActivationReLU(0.01f)),
     _layer11(0.01f, ActivationLinear()),
     _v1(omp_get_max_threads(), decltype(_v1)::value_type::Zero()),
@@ -42,10 +42,10 @@ double FeatureDetector<T_Optimizer>::trainBatch(const TrainingBatch& batch)
     }
     loss /= batch.size();
 
-    constexpr float learningRate = 0.00025f;
-    constexpr float momentum = 0.95f;
-    constexpr float momentum2 = 0.999f;
-    constexpr float weightDecay = 0.0f;
+    constexpr float learningRate = 0.001f;
+    constexpr float momentum = 0.9f;
+    constexpr float momentum2 = 0.99f;
+    constexpr float weightDecay = 0.0005f;
 
     _layer1a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
     _layer2a.getOptimizer()->template applyGradients<float>(learningRate, momentum, momentum2, weightDecay);
@@ -128,31 +128,40 @@ typename FeatureDetector<T_Optimizer>::LastLayer::Output
     const typename LastLayer::Output& pred, const typename LastLayer::Output& label)
 {
     typename LastLayer::Output g = pred - label;
-    if (g.template block<2, 1>(0, 0).norm() > 2.0f) {
-        g(0) = 0.0f;
-        g(1) = 0.0f;
+    if (label.template block<2,1>(0,0).norm() > 1.0f) {
+        // move outside the unit circle in case the prediction is inside it
+        if (pred.template block<2,1>(0,0).norm() > 1.0f)
+            g.template block<2,1>(0,0) << 0.0f, 0.0f;
+        else
+            g.template block<2,1>(0,0) =
+                pred.template block<2,1>(0,0) - pred.template block<2,1>(0,0).normalized() * 2.0f;
     }
     return g;
 }
 
 
-template <typename T_Matrix>
-T_Matrix& dropoutMask(float zeroRate)
-{
-    static std::vector<T_Matrix, Eigen::aligned_allocator<T_Matrix>> m(omp_get_max_threads(), T_Matrix::Zero());
-    m[omp_get_thread_num()] = (T_Matrix::Random()*0.5f+T_Matrix::Ones()*(1.0f-zeroRate)).array().round().matrix();
-    return m[omp_get_thread_num()];
-}
-
 template <template <typename> class T_Optimizer>
 typename FeatureDetector<T_Optimizer>::LastLayer::Output
     FeatureDetector<T_Optimizer>::trainingForward(const Feature& f1, const Feature& f2)
 {
-    _v1[omp_get_thread_num()] = _layer2a(_layer1a(f1.polar));
-    _v2[omp_get_thread_num()] = _layer2b(_layer1b(f2.polar));
+    _v1[omp_get_thread_num()] =
+        _layer2a.trainingForward(
+        _layer1a.trainingForward(f1.polar));
+    _v2[omp_get_thread_num()] =
+        _layer2b.trainingForward(
+        _layer1b.trainingForward(f2.polar));
     _v3[omp_get_thread_num()] << _v1[omp_get_thread_num()].transpose(), _v2[omp_get_thread_num()].transpose();
-    return _layer11(_layer10(_layer9(_layer8(_layer7(_layer6(_layer5(_layer4(_layer3(
-        _v3[omp_get_thread_num()])))))))));
+    return _layer11.trainingForward(
+        _layer10.trainingForward(
+        _layer9.trainingForward(
+        _layer8.trainingForward(
+        _layer7.trainingForward(
+        _layer6.trainingForward(
+        _layer5.trainingForward(
+        _layer4.trainingForward(
+        _layer3.trainingForward(
+        _v3[omp_get_thread_num()]
+        )))))))));
 }
 
 template <template <typename> class T_Optimizer>
@@ -164,11 +173,13 @@ float FeatureDetector<T_Optimizer>::trainingPass(
 
     // backpropagate
     _g[omp_get_thread_num()] = gradient(pred, label);
-
-    //printf("pred: %12.8f %12.8f %12.8f label: %12.8f %12.8f %12.8f grad: %12.8f %12.8f %12.8f\n",
-    //    pred(0), pred(1), pred(2), label(0), label(1), label(2), _g(0), _g(1), _g(2));
-
-    _g3[omp_get_thread_num()] = _layer3.backpropagate(
+#if 0
+    printf("pred: %12.8f %12.8f %12.8f label: %12.8f %12.8f %12.8f grad: %12.8f %12.8f %12.8f\n",
+        pred(0), pred(1), pred(2), label(0), label(1), label(2),
+        _g[omp_get_thread_num()](0), _g[omp_get_thread_num()](1), _g[omp_get_thread_num()](2));
+#endif
+    _g3[omp_get_thread_num()] =
+    _layer3.backpropagate(
     _layer4.backpropagate(
     _layer5.backpropagate(
     _layer6.backpropagate(

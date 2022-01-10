@@ -382,7 +382,7 @@ void trainFeatureDetector()
     }
 #endif
 
-    FeatureDetector<OptimizerAdam> detector;
+    FeatureDetector<OptimizerAdam> detector(0.2);
     detector.loadWeights("../feature_detector_model");
     double minEvaluationLoss = std::numeric_limits<double>::max();
     int epochStartId = 0;
@@ -412,8 +412,8 @@ void trainFeatureDetector()
 
         Eigen::internal::set_is_malloc_allowed(true);
 
-        printf("Epoch %d finished, trainingLoss: %13.10f, evaluationLoss: %13.10f, time: %ld\n",
-            e, trainingLoss, evaluationLoss,
+        printf("Epoch %d finished, trainingLoss: %13.10f, evaluationLoss: %13.10f, best: %13.10f time: %ld\n",
+            e, trainingLoss, evaluationLoss, minEvaluationLoss,
             std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
 
         detector.printInfo();
