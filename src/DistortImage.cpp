@@ -37,8 +37,8 @@ DistortedImage distortImage(const cv::Mat& image, const DistortSettings& setting
     }
 
     cv::Mat distorted = image.clone();
-    distortedImage.backwardMap = cv::Mat(image.rows, image.cols, CV_32FC2);
-    distortedImage.forwardMap = cv::Mat(image.rows, image.cols, CV_32FC2);
+    distortedImage.backwardMap = cv::Mat::zeros(image.rows, image.cols, CV_32FC2);
+    distortedImage.forwardMap = cv::Mat::zeros(image.rows, image.cols, CV_32FC2);
 
     std::vector<Vec2d, Eigen::aligned_allocator<Vec2d>> forwardTargetVectors;
     forwardTargetVectors.reserve(image.cols*image.rows);
