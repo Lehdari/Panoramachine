@@ -15,8 +15,10 @@
 #include <vector>
 #include <opencv2/core/mat.hpp>
 
+#include "Image.hpp"
 
-cv::Mat stitchImages(const std::vector<cv::Mat>& images);
+
+cv::Mat stitchImages(const std::vector<Image<Vec3f>>& images);
 
 
 #endif //IMAGE_DEMORPHING_STITCHIMAGES_HPP

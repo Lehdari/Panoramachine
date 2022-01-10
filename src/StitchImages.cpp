@@ -11,6 +11,7 @@
 #include "StitchImages.hpp"
 #include "Feature.hpp"
 #include "FeatureDetector.hpp"
+#include "Momentum.hpp"
 
 #include <random>
 #include <opencv2/highgui.hpp>
@@ -18,68 +19,108 @@
 
 
 #define RND ((rnd()%1000001)*0.000001)
+#define RNDE ((rnd()%1000000)*0.000001) // endpoint excluded
 
 
-cv::Mat stitchImages(const std::vector<cv::Mat>& images)
+void drawFeatures(
+    const cv::Mat& combinedScaled,
+    std::vector<Feature>& features1,
+    std::vector<Feature>& features2,
+    int wait = 0)
 {
-    constexpr int nFeatures = 100;
+    cv::Mat img = combinedScaled.clone();
+    for (int i=0; i<features1.size(); ++i) {
+        auto& f1 = features1[i];
+        auto& f2 = features2[i];
+        cv::Point p1(f1.p(0) / 4.0f, f1.p(1) / 4.0f);
+        cv::Point p2(combinedScaled.cols/2 + f2.p(0) / 4.0f, f2.p(1) / 4.0f);
+        cv::circle(img, p1, f1.scale*4, cv::Scalar(1.0, 1.0, 1.0));
+        cv::circle(img, p2, f2.scale*4, cv::Scalar(1.0, 1.0, 1.0));
+        cv::line(img, p1, p2, cv::Scalar(1.0, 1.0, 1.0));
+    }
+    cv::imshow("stitch", img);
+    cv::waitKey(wait);
+}
 
-    std::default_random_engine rnd(1507715517);
+void findMatchingFeatures(
+    FeatureDetector<OptimizerStatic>& detector,
+    Feature& f1,
+    Feature& f2,
+    const Image<Vec3f>& img1,
+    const Image<Vec3f>& img2,
+    float threshold = 0.5f)
+{
+    static std::default_random_engine rnd(1507715517);
+    float scale = 0.0f;
+    Vec2f diff(1.0f, 1.0f);
+    while (diff.norm() > threshold) {
+        Vec2f p1(RND * img1[0].cols, RND * img1[0].rows);
+        Vec2f p2(RND * img2[0].cols, RND * img2[0].rows);
+        scale = std::pow(2.0f, 4.0f + RND * 2.0f);
+        f1 = Feature(img1, p1, scale);
+        f2 = Feature(img2, p2, scale);
+        diff = detector(f1, f2).block<2, 1>(0, 0);
+    }
+}
+
+cv::Mat stitchImages(const std::vector<Image<Vec3f>>& images)
+{
     FeatureDetector<OptimizerStatic> detector;
     detector.loadWeights("../feature_detector_model");
 
     cv::Mat img1scaled, img2scaled, combinedScaled, stitch;
-    cv::resize(images[0], img1scaled, cv::Size(0,0), 1.0/4.0, 1.0/4.0, cv::INTER_LINEAR);
-    cv::resize(images[1], img2scaled, cv::Size(0,0), 1.0/4.0, 1.0/4.0, cv::INTER_LINEAR);
-    gammaCorrect(img1scaled, 1.0f/2.2f);
-    gammaCorrect(img2scaled, 1.0f/2.2f);
+    cv::resize(static_cast<cv::Mat>(images[0]), img1scaled, cv::Size(0,0), 1.0/4.0, 1.0/4.0, cv::INTER_LINEAR);
+    cv::resize(static_cast<cv::Mat>(images[1]), img2scaled, cv::Size(0,0), 1.0/4.0, 1.0/4.0, cv::INTER_LINEAR);
     cv::hconcat(img1scaled, img2scaled, combinedScaled);
 
     std::vector<Feature> features1;
-    features1.reserve(nFeatures);
     std::vector<Feature> features2;
-    features2.reserve(nFeatures);
+    std::vector<Momentum<Vec2f>> diffMomenta;
 
-    for (int i=0; i<nFeatures; ++i) {
-        features1.emplace_back(images[0], Vec2f(RND*(images[0].cols-1.0e-8f), RND*(images[0].rows-1.0e-8f)), 2.0f);
-        features2.emplace_back(images[1], Vec2f(RND*(images[1].cols-1.0e-8f), RND*(images[1].rows-1.0e-8f)), 2.0f);
+    constexpr int nFeatures = 16;
+    constexpr double diffMomentum = 0.75;
+    for (int f=0; f<nFeatures; ++f) {
+        Feature f1, f2;
+        findMatchingFeatures(detector, f1, f2, images[0], images[1], 0.25f);
+        features1.push_back(std::move(f1));
+        features2.push_back(std::move(f2));
+        diffMomenta.emplace_back(diffMomentum, detector(f1, f2).block<2, 1>(0, 0));
     }
 
-    stitch = combinedScaled.clone();
+    drawFeatures(combinedScaled, features1, features2);
 
-    cv::Mat featureDistances(nFeatures, nFeatures, CV_32F);
-    for (int j=0; j<nFeatures; ++j) {
-        auto* r = featureDistances.ptr<float>(j);
-        for (int i=0; i<nFeatures; ++i) {
-            r[i] = detector(features1[j], features2[i]);
-        }
-    }
-
-    for (int j=0; j<nFeatures; ++j) {
-        auto* r = featureDistances.ptr<float>(j);
-        float minDistance = std::numeric_limits<float>::max();
-        int minId = 0;
-        for (int i=0; i<nFeatures; ++i) {
-            if (r[i] < minDistance) {
-                minDistance = r[i];
-                minId = i;
+    constexpr int nOptimizationSteps = 512;
+    constexpr float maxDiffScale = 1.0f;
+    constexpr float maxVarianceScale = 1.0f;
+    for (int e = 0; e < nOptimizationSteps; ++e) {
+        float maxDiff = (1.0f - ((float)e/nOptimizationSteps)*0.5f)*maxDiffScale;
+        float maxVariance = (1.0f - ((float)e/nOptimizationSteps)*0.75f)*maxVarianceScale;
+        for (int f=0; f<nFeatures; ++f) {
+            auto& f1 = features1[f];
+            auto& f2 = features2[f];
+            Vec2f diff = diffMomenta[f];
+            Vec2f p1 = f1.p + diff * 0.25f * f1.scale * Feature::fmr;
+            Vec2f p2 = f2.p - diff * 0.25f * f2.scale * Feature::fmr;
+            if (//diff.norm() > maxDiff ||
+                diffMomenta[f].variance() > maxVariance ||
+                f1.scale > 64.0f ||
+                p1(0) < 0.0f || p1(0) > (float)images[0][0].cols ||
+                p1(1) < 0.0f || p1(1) > (float)images[0][0].rows ||
+                p2(0) < 0.0f || p2(0) > (float)images[1][0].cols ||
+                p2(1) < 0.0f || p2(1) > (float)images[1][0].rows) {
+                findMatchingFeatures(detector, f1, f2, images[0], images[1], maxDiff*0.5f);
+                diffMomenta[f] = Momentum<Vec2f>(diffMomentum, detector(f1, f2).block<2, 1>(0, 0));
+            }
+            else {
+                float newScale = std::max(f1.scale * (1.0f-maxVariance*0.4f+diffMomenta[f].variance()), 0.25f);
+                f1 = Feature(images[0], p1, newScale);
+                f2 = Feature(images[1], p2, newScale);
+                diffMomenta[f](detector(f1, f2).block<2, 1>(0, 0));
             }
         }
-
-        if (minDistance > 0.25f)
-            continue;
-
-        auto& p1 = features1[j].p;
-        auto& p2 = features2[minId].p;
-        cv::line(stitch,
-            cv::Point(p1(0)/4.0, p1(1)/4.0),
-            cv::Point(p1(0)/4.0+images[0].cols/4, p2(1)/4.0),
-            cv::Scalar(1.0, 1.0, 1.0));
+        drawFeatures(combinedScaled, features1, features2, 20);
     }
-
-    cv::imshow("stitch", stitch);
-    cv::imshow("featureDistances", featureDistances);
-    cv::waitKey();
+    drawFeatures(combinedScaled, features1, features2);
 
     return cv::Mat(32, 32, CV_32FC3);
 }
