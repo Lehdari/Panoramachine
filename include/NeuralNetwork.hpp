@@ -136,13 +136,14 @@ struct OptimizerAdam : public Optimizer<OptimizerAdam, T_Weights>
         for (auto& wgtt : wgt)
             wg += wgtt;
 
-        wm = momentum*wm + (1.0-momentum)*wg; // update first moment
-        wv = momentum*wv + (1.0-momentum2)*(wg.array().square().matrix()); // update second moment
+        wm.noalias() = momentum*wm + (1.0-momentum)*wg; // update first moment
+        wv.noalias() = momentum2*wv + (1.0-momentum2)*(wg.array().square().matrix()); // update second moment
 
-        T_Scalar alpha = learningRate * (std::sqrt(1.0 - std::pow(momentum2, (T_Scalar)t)) /
+        T_Scalar alpha = learningRate *
+            (std::sqrt(1.0 - std::pow(momentum2, (T_Scalar)t)) /
             (1.0 - std::pow(momentum, (T_Scalar)t)));
 
-        this->w -= alpha * wm.template cwiseProduct((wv.cwiseSqrt()+T_Weights::Ones()*epsilon).cwiseInverse());
+        this->w -= alpha * wm.cwiseProduct((wv.cwiseSqrt()+T_Weights::Ones()*epsilon).cwiseInverse());
 
         if (weightDecay >= epsilon) // weight decay
             this->w.noalias() = this->w*(1.0-weightDecay);
