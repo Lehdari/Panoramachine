@@ -1,4 +1,4 @@
-Image Demorphing
+Panoramachine
 ================
 
-Demorph images
+Stitch images into panoramas

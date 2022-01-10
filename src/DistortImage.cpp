@@ -1,5 +1,5 @@
 //
-// Project: image_demorphing
+// Project: panoramachine
 // File: DistortImage.cpp
 //
 // Copyright (c) 2021 Miika 'Lehdari' Lehtimäki

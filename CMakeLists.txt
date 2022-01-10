@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 
-project(image_demorphing)
+project(panoramachine)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -19,18 +19,18 @@ add_subdirectory(include)
 add_subdirectory(src)
 
 
-# Add image demorphing benchmark test target
-add_executable(image_demorphing
-    ${IMAGE_DEMORPHING_HEADERS}
-    ${IMAGE_DEMORPHING_SOURCES}
+# Add panoramachine executable target
+add_executable(panoramachine
+    ${PANORAMACHINE_HEADERS}
+    ${PANORAMACHINE_SOURCES}
 )
 
-target_include_directories(image_demorphing
+target_include_directories(panoramachine
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_link_libraries(image_demorphing
+target_link_libraries(panoramachine
     PUBLIC
         OpenMP::OpenMP_CXX
         ${OpenCV_LIBS}
@@ -38,7 +38,7 @@ target_link_libraries(image_demorphing
         delaunay
 )
 
-target_compile_definitions(image_demorphing
+target_compile_definitions(panoramachine
     PUBLIC
-        IMAGE_DEMORPHING_RES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/res/"
+        PANORAMACHINE_RES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/res/"
 )

@@ -1,5 +1,5 @@
 //
-// Project: image_demorphing
+// Project: panoramachine
 // File: Feature.hpp
 //
 // Copyright (c) 2021 Miika 'Lehdari' Lehtimäki
@@ -8,8 +8,8 @@
 // with this source code package.
 //
 
-#ifndef IMAGE_DEMORPHING_FEATURE_HPP
-#define IMAGE_DEMORPHING_FEATURE_HPP
+#ifndef PANORAMACHINE_FEATURE_HPP
+#define PANORAMACHINE_FEATURE_HPP
 
 
 #include <opencv2/core/mat.hpp>
@@ -45,4 +45,4 @@ private:
 void visualizeFeature(Feature& feature, const std::string& windowName, int scale=1);
 
 
-#endif //IMAGE_DEMORPHING_FEATURE_HPP
+#endif //PANORAMACHINE_FEATURE_HPP

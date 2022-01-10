@@ -1,5 +1,5 @@
 //
-// Project: image_demorphing
+// Project: panoramachine
 // File: StitchImages.hpp
 //
 // Copyright (c) 2021 Miika 'Lehdari' Lehtimäki
@@ -8,8 +8,8 @@
 // with this source code package.
 //
 
-#ifndef IMAGE_DEMORPHING_STITCHIMAGES_HPP
-#define IMAGE_DEMORPHING_STITCHIMAGES_HPP
+#ifndef PANORAMACHINE_STITCHIMAGES_HPP
+#define PANORAMACHINE_STITCHIMAGES_HPP
 
 
 #include <vector>
@@ -21,4 +21,4 @@
 cv::Mat stitchImages(const std::vector<Image<Vec3f>>& images);
 
 
-#endif //IMAGE_DEMORPHING_STITCHIMAGES_HPP
+#endif //PANORAMACHINE_STITCHIMAGES_HPP

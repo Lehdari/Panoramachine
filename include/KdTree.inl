@@ -1,5 +1,5 @@
 //
-// Project: image_demorphing
+// Project: panoramachine
 // File: KdTree.inl
 //
 // Copyright (c) 2021 Miika 'Lehdari' Lehtimäki

@@ -1,5 +1,5 @@
 //
-// Project: image_demorphing
+// Project: panoramachine
 // File: ImagePostProcessing.hpp
 //
 // Copyright (c) 2021 Miika 'Lehdari' Lehtimäki
@@ -8,8 +8,8 @@
 // with this source code package.
 //
 
-#ifndef IMAGE_DEMORPHING_IMAGEPOSTPROCESSING_HPP
-#define IMAGE_DEMORPHING_IMAGEPOSTPROCESSING_HPP
+#ifndef PANORAMACHINE_IMAGEPOSTPROCESSING_HPP
+#define PANORAMACHINE_IMAGEPOSTPROCESSING_HPP
 
 
 #include "MathTypes.hpp"
@@ -19,4 +19,4 @@
 void brightnessContrast(Image<Vec3f>& img, const Vec3f& brightness, const Vec3f& contrast);
 
 
-#endif //IMAGE_DEMORPHING_IMAGEPOSTPROCESSING_HPP
+#endif //PANORAMACHINE_IMAGEPOSTPROCESSING_HPP

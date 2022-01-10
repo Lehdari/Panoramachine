@@ -1,5 +1,5 @@
 //
-// Project: image_demorphing
+// Project: panoramachine
 // File: TrainFeatureDetector.hpp
 //
 // Copyright (c) 2021 Miika 'Lehdari' Lehtimäki
@@ -8,8 +8,8 @@
 // with this source code package.
 //
 
-#ifndef IMAGE_DEMORPHING_TRAINFEATUREDETECTOR_HPP
-#define IMAGE_DEMORPHING_TRAINFEATUREDETECTOR_HPP
+#ifndef PANORAMACHINE_TRAINFEATUREDETECTOR_HPP
+#define PANORAMACHINE_TRAINFEATUREDETECTOR_HPP
 
 
 #include <vector>
@@ -58,4 +58,4 @@ TrainingEntry makeTrainingEntry(const TrainingImages& trainingImages, float simi
 void trainFeatureDetector();
 
 
-#endif //IMAGE_DEMORPHING_TRAINFEATUREDETECTOR_HPP
+#endif //PANORAMACHINE_TRAINFEATUREDETECTOR_HPP

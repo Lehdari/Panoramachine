@@ -1,5 +1,5 @@
 //
-// Project: image_demorphing
+// Project: panoramachine
 // File: CorrectionAlgorithms.hpp
 //
 // Copyright (c) 2021 Miika 'Lehdari' Lehtimäki
@@ -8,8 +8,8 @@
 // with this source code package.
 //
 
-#ifndef IMAGE_DEMORPHING_CORRECTIONALGORITHMS_HPP
-#define IMAGE_DEMORPHING_CORRECTIONALGORITHMS_HPP
+#ifndef PANORAMACHINE_CORRECTIONALGORITHMS_HPP
+#define PANORAMACHINE_CORRECTIONALGORITHMS_HPP
 
 
 #include <opencv2/core/mat.hpp>
@@ -19,4 +19,4 @@ cv::Mat createCorrection2(const cv::Mat& source, const cv::Mat& target);
 cv::Mat createCorrection4(const cv::Mat& source, const cv::Mat& target);
 
 
-#endif //IMAGE_DEMORPHING_CORRECTIONALGORITHMS_HPP
+#endif //PANORAMACHINE_CORRECTIONALGORITHMS_HPP

@@ -1,5 +1,5 @@
 //
-// Project: image_demorphing
+// Project: panoramachine
 // File: MorphTransform.hpp
 //
 // Copyright (c) 2021 Miika 'Lehdari' Lehtimäki
@@ -8,8 +8,8 @@
 // with this source code package.
 //
 
-#ifndef IMAGE_DEMORPHING_MORPHTRANSFORM_HPP
-#define IMAGE_DEMORPHING_MORPHTRANSFORM_HPP
+#ifndef PANORAMACHINE_MORPHTRANSFORM_HPP
+#define PANORAMACHINE_MORPHTRANSFORM_HPP
 
 
 #include "MathTypes.hpp"
@@ -115,4 +115,4 @@ MorphTransform<T_Scalar> MorphTransform<T_Scalar>::randomTransform(
 #undef RND
 
 
-#endif //IMAGE_DEMORPHING_MORPHTRANSFORM_HPP
+#endif //PANORAMACHINE_MORPHTRANSFORM_HPP

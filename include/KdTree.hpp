@@ -1,5 +1,5 @@
 //
-// Project: image_demorphing
+// Project: panoramachine
 // File: KdTree.hpp
 //
 // Copyright (c) 2021 Miika 'Lehdari' Lehtimäki
@@ -8,8 +8,8 @@
 // with this source code package.
 //
 
-#ifndef IMAGE_DEMORPHING_KDTREE_HPP
-#define IMAGE_DEMORPHING_KDTREE_HPP
+#ifndef PANORAMACHINE_KDTREE_HPP
+#define PANORAMACHINE_KDTREE_HPP
 
 
 #include "MathTypes.hpp"
@@ -98,4 +98,4 @@ private:
 #include "KdTree.inl"
 
 
-#endif //IMAGE_DEMORPHING_KDTREE_HPP
+#endif //PANORAMACHINE_KDTREE_HPP

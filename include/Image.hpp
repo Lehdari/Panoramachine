@@ -1,5 +1,5 @@
 //
-// Project: image_demorphing
+// Project: panoramachine
 // File: Image.hpp
 //
 // Copyright (c) 2021 Miika 'Lehdari' Lehtimäki
@@ -8,8 +8,8 @@
 // with this source code package.
 //
 
-#ifndef IMAGE_DEMORPHING_IMAGE_HPP
-#define IMAGE_DEMORPHING_IMAGE_HPP
+#ifndef PANORAMACHINE_IMAGE_HPP
+#define PANORAMACHINE_IMAGE_HPP
 
 
 #include <opencv2/core/mat.hpp>
@@ -57,4 +57,4 @@ private:
 #include "Image.inl"
 
 
-#endif //IMAGE_DEMORPHING_IMAGE_HPP
+#endif //PANORAMACHINE_IMAGE_HPP

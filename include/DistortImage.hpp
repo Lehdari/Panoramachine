@@ -1,5 +1,5 @@
 //
-// Project: image_demorphing
+// Project: panoramachine
 // File: DistortImage.hpp
 //
 // Copyright (c) 2021 Miika 'Lehdari' Lehtimäki
@@ -8,8 +8,8 @@
 // with this source code package.
 //
 
-#ifndef IMAGE_DEMORPHING_DISTORTIMAGE_HPP
-#define IMAGE_DEMORPHING_DISTORTIMAGE_HPP
+#ifndef PANORAMACHINE_DISTORTIMAGE_HPP
+#define PANORAMACHINE_DISTORTIMAGE_HPP
 
 
 #include <opencv2/core/mat.hpp>
@@ -41,4 +41,4 @@ struct DistortedImage {
 DistortedImage distortImage(const cv::Mat& image, const DistortSettings& settings);
 
 
-#endif //IMAGE_DEMORPHING_DISTORTIMAGE_HPP
+#endif //PANORAMACHINE_DISTORTIMAGE_HPP

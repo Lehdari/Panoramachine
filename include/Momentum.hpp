@@ -1,5 +1,5 @@
 //
-// Project: image_demorphing
+// Project: panoramachine
 // File: Momentum.hpp
 //
 // Copyright (c) 2022 Miika 'Lehdari' Lehtimäki
@@ -8,8 +8,8 @@
 // with this source code package.
 //
 
-#ifndef IMAGE_DEMORPHING_MOMENTUM_HPP
-#define IMAGE_DEMORPHING_MOMENTUM_HPP
+#ifndef PANORAMACHINE_MOMENTUM_HPP
+#define PANORAMACHINE_MOMENTUM_HPP
 
 
 #include <Eigen/Dense>
@@ -87,4 +87,4 @@ private:
 
 
 
-#endif //IMAGE_DEMORPHING_MOMENTUM_HPP
+#endif //PANORAMACHINE_MOMENTUM_HPP

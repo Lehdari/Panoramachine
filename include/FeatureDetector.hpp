@@ -1,5 +1,5 @@
 //
-// Project: image_demorphing
+// Project: panoramachine
 // File: FeatureDetector.hpp
 //
 // Copyright (c) 2021 Miika 'Lehdari' Lehtimäki
@@ -8,8 +8,8 @@
 // with this source code package.
 //
 
-#ifndef IMAGE_DEMORPHING_FEATUREDETECTOR_HPP
-#define IMAGE_DEMORPHING_FEATUREDETECTOR_HPP
+#ifndef PANORAMACHINE_FEATUREDETECTOR_HPP
+#define PANORAMACHINE_FEATUREDETECTOR_HPP
 
 
 #include "TrainFeatureDetector.hpp"
@@ -72,4 +72,4 @@ private:
 #include "FeatureDetector.inl"
 
 
-#endif //IMAGE_DEMORPHING_FEATUREDETECTOR_HPP
+#endif //PANORAMACHINE_FEATUREDETECTOR_HPP

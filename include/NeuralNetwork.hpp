@@ -1,5 +1,5 @@
 //
-// Project: image_demorphing
+// Project: panoramachine
 // File: NeuralNetwork.hpp
 //
 // Copyright (c) 2021 Miika 'Lehdari' Lehtimäki
@@ -8,8 +8,8 @@
 // with this source code package.
 //
 
-#ifndef IMAGE_DEMORPHING_NEURALNETWORK_HPP
-#define IMAGE_DEMORPHING_NEURALNETWORK_HPP
+#ifndef PANORAMACHINE_NEURALNETWORK_HPP
+#define PANORAMACHINE_NEURALNETWORK_HPP
 
 
 #include "MathTypes.hpp"
@@ -439,4 +439,4 @@ private:
 };
 
 
-#endif //IMAGE_DEMORPHING_NEURALNETWORK_HPP
+#endif //PANORAMACHINE_NEURALNETWORK_HPP

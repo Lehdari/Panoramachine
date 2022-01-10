@@ -1,5 +1,5 @@
 //
-// Project: image_demorphing
+// Project: panoramachine
 // File: Utils.hpp
 //
 // Copyright (c) 2021 Miika 'Lehdari' Lehtimäki
@@ -8,8 +8,8 @@
 // with this source code package.
 //
 
-#ifndef IMAGE_DEMORPHING_UTILS_HPP
-#define IMAGE_DEMORPHING_UTILS_HPP
+#ifndef PANORAMACHINE_UTILS_HPP
+#define PANORAMACHINE_UTILS_HPP
 
 
 #include "MathTypes.hpp"
@@ -36,4 +36,4 @@ template <> constexpr int PixelFormatMap::format<Vec3f> = CV_32FC3;
 #include "Utils.inl"
 
 
-#endif //IMAGE_DEMORPHING_UTILS_HPP
+#endif //PANORAMACHINE_UTILS_HPP
