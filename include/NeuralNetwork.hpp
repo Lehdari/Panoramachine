@@ -153,6 +153,18 @@ struct OptimizerAdam : public Optimizer<OptimizerAdam, T_Weights>
         wg = T_Weights::Zero();
     }
 
+    void saveWeights(const std::string& filename)
+    {
+        T_Weights wOut = this->w * (1.0f-this->dropoutRate);
+        writeMatrixBinary(filename, wOut);
+    }
+
+    void loadWeights(const std::string& filename)
+    {
+        readMatrixBinary(filename, this->w);
+        this->w /= (1.0f-this->dropoutRate);
+    }
+
     std::vector<T_Weights, Eigen::aligned_allocator<T_Weights>> wgt;
     T_Weights   wg; // gradient
     T_Weights   wm; // first moment
