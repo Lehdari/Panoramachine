@@ -36,6 +36,7 @@ public:
 
     // layer access
     cv::Mat& operator[](int layer);
+    const cv::Mat& operator[](int layer) const;
 
     // implicit conversion to cv::Mat returns the first layer
     operator cv::Mat() const;

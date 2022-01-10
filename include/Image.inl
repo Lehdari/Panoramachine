@@ -77,6 +77,12 @@ cv::Mat& Image<T>::operator[](int layer)
 }
 
 template<typename T>
+const cv::Mat& Image<T>::operator[](int layer) const
+{
+    return _layers[layer];
+}
+
+template<typename T>
 Image<T>::operator cv::Mat() const
 {
     return _layers[0];
