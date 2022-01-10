@@ -172,18 +172,22 @@ TrainingEntry makeMatchingTrainingEntry(
     // first (inner) radii for the features
     float rBase = std::pow(2.0, 6.0*RND-2.0); // base radius so the two radii are not ridiculously far from each other
     float s1 = rBase*std::pow(2.0, 4.0*RND-2.0);
-    float s2 = rBase*std::pow(2.0, 4.0*RND-2.0);
+    float s2 = s1;//rBase*std::pow(2.0, 4.0*RND-2.0);
     // feature separation distance
-    float distance = diff*2.0f*(std::min(s1, s2)*Feature::fmr);
+    float distance = diff*1.0f*(std::min(s1, s2)*Feature::fmr);
 
     p1 << RND*((cv::Mat)(*img1)).cols, RND*((cv::Mat)(*img1)).rows;
     f1 = Feature(*img1, p1, s1);
+#if 0
     if (imgSubId1 > 0) {// backward map first if first image is distorted
         p1 += trainingImage.distorted[imgSubId2].backwardMap.at<Vec2f>((int)p1(1), (int)p1(0));
         p1(0) = std::clamp(p1(0), 0.0f, (float)(((cv::Mat)(*img1)).cols-1));
         p1(1) = std::clamp(p1(1), 0.0f, (float)(((cv::Mat)(*img1)).rows-1));
     }
     p2 = p1 + trainingImage.distorted[imgSubId2].forwardMap.at<Vec2f>((int)p1(1), (int)p1(0));
+#else
+    p2 = p1;
+#endif
 
     float dir = 2.0f*M_PI*RND;
     Vec2f ddir(std::cos(dir), std::sin(dir));
@@ -194,7 +198,7 @@ TrainingEntry makeMatchingTrainingEntry(
 
     float distanceScale = 1.0f / (Feature::fmr*f1.scale);
     return { std::move(f1), std::move(f2),
-        Vec3f((p2(0)-p1(0))*distanceScale, p2(1)-p1(1)*distanceScale, f2.scale / f1.scale) };
+        Vec3f((p2(0)-p1(0))*distanceScale, (p2(1)-p1(1))*distanceScale, f2.scale / f1.scale) };
 }
 
 void generateDataset(TrainingData& trainingData, int datasetSize, const std::string& datasetImagesDirectory)
@@ -259,7 +263,7 @@ void generateDataset(TrainingData& trainingData, int datasetSize, const std::str
         #pragma omp parallel for
         for (int i=0; i<featuresPerImage; ++i) {
             std::default_random_engine rnd(1507+715517*i);
-            float diff = RND*0.5f;
+            float diff = RND;
             trainingData[datasetOffset+i] = makeMatchingTrainingEntry(trainingImage, diff, rnd);
 
 #if 0
