@@ -26,17 +26,24 @@ void drawFeatures(
     const cv::Mat& combinedScaled,
     std::vector<Feature>& features1,
     std::vector<Feature>& features2,
+    Mat3f homography = Mat3f::Identity(),
     int wait = 0)
 {
     cv::Mat img = combinedScaled.clone();
     for (int i=0; i<features1.size(); ++i) {
         auto& f1 = features1[i];
         auto& f2 = features2[i];
+        Vec3f f1p1, f1p2;
+        f1p1 << f1.p, 1.0f;
+        f1p2 = homography * f1p1;
+        f1p2 /= f1p2(2);
         cv::Point p1(f1.p(0) / 4.0f, f1.p(1) / 4.0f);
         cv::Point p2(combinedScaled.cols/2 + f2.p(0) / 4.0f, f2.p(1) / 4.0f);
+        cv::Point p2h(combinedScaled.cols/2 + f1p2(0) / 4.0f, f1p2(1) / 4.0f);
         cv::circle(img, p1, f1.scale*4, cv::Scalar(1.0, 1.0, 1.0));
         cv::circle(img, p2, f2.scale*4, cv::Scalar(1.0, 1.0, 1.0));
         cv::line(img, p1, p2, cv::Scalar(1.0, 1.0, 1.0));
+        cv::line(img, p1, p2h, cv::Scalar(0.0, 0.0, 1.0));
     }
     cv::imshow("stitch", img);
     cv::waitKey(wait);
@@ -87,9 +94,16 @@ cv::Mat stitchImages(const std::vector<Image<Vec3f>>& images)
         diffMomenta.emplace_back(diffMomentum, detector(f1, f2).block<2, 1>(0, 0));
     }
 
-    drawFeatures(combinedScaled, features1, features2);
+    std::vector<Vec2f> fp1, fp2;
+    for (int i=0; i<nFeatures; ++i) {
+        fp1.push_back(features1[i].p);
+        fp2.push_back(features2[i].p);
+    }
+    Mat3f h = computeHomography(fp1, fp2);
 
-    constexpr int nOptimizationSteps = 512;
+    drawFeatures(combinedScaled, features1, features2, h);
+
+    constexpr int nOptimizationSteps = 1024;
     constexpr float maxDiffScale = 1.0f;
     constexpr float maxVarianceScale = 1.0f;
     for (int e = 0; e < nOptimizationSteps; ++e) {
@@ -101,8 +115,7 @@ cv::Mat stitchImages(const std::vector<Image<Vec3f>>& images)
             Vec2f diff = diffMomenta[f];
             Vec2f p1 = f1.p + diff * 0.25f * f1.scale * Feature::fmr;
             Vec2f p2 = f2.p - diff * 0.25f * f2.scale * Feature::fmr;
-            if (//diff.norm() > maxDiff ||
-                diffMomenta[f].variance() > maxVariance ||
+            if (diffMomenta[f].variance() > maxVariance ||
                 f1.scale > 64.0f ||
                 p1(0) < 0.0f || p1(0) > (float)images[0][0].cols ||
                 p1(1) < 0.0f || p1(1) > (float)images[0][0].rows ||
@@ -117,10 +130,13 @@ cv::Mat stitchImages(const std::vector<Image<Vec3f>>& images)
                 f2 = Feature(images[1], p2, newScale);
                 diffMomenta[f](detector(f1, f2).block<2, 1>(0, 0));
             }
+            fp1[f] = f1.p;
+            fp2[f] = f2.p;
         }
-        drawFeatures(combinedScaled, features1, features2, 20);
+        h = computeHomography(fp1, fp2);
+        drawFeatures(combinedScaled, features1, features2, h, 20);
     }
-    drawFeatures(combinedScaled, features1, features2);
+    drawFeatures(combinedScaled, features1, features2, h);
 
     return cv::Mat(32, 32, CV_32FC3);
 }
