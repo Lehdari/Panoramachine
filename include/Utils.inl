@@ -147,3 +147,22 @@ Image<T> readImage(const std::string& filename)
     cv::imread(filename).convertTo(img, PixelFormatMap::format<T>, 1/255.0);
     return img;
 }
+
+template <typename T_Scalar>
+Eigen::Matrix<T_Scalar, 2, 9> createPointMatchingMatrix(
+    const Eigen::Matrix<T_Scalar,2,1>& x,
+    const Eigen::Matrix<T_Scalar,2,1>& y)
+{
+    Eigen::Matrix<T_Scalar, 2, 9> m = Eigen::Matrix<T_Scalar, 2, 9>::Zero();
+    m.template block<1,2>(0,0) = -x.transpose();
+    m(0,2) = -1.0;
+    m.template block<1,2>(1,3) = -x.transpose();
+    m(1,5) = -1.0;
+    m(0,6) = x(0) * y(0);
+    m(0,7) = x(1) * y(0);
+    m(0,8) = y(0);
+    m(1,6) = x(0) * y(1);
+    m(1,7) = x(1) * y(1);
+    m(1,8) = y(1);
+    return m;
+}

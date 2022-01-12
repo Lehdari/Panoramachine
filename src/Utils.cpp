@@ -11,6 +11,7 @@
 #include "Utils.hpp"
 #include <algorithm>
 #include <opencv2/highgui.hpp>
+#include <Eigen/SVD>
 
 
 namespace {
@@ -94,4 +95,23 @@ cv::Mat load2ChannelImage(const std::string& filename)
     }
 
     return img2;
+}
+
+Mat3f computeHomography(const std::vector<Vec2f>& x, const std::vector<Vec2f>& y)
+{
+    assert(x.size() == y.size());
+
+    Mat3d h;
+    Eigen::MatrixXd p;
+    p.resize(x.size()*2, 9);
+    for (int i=0; i<x.size(); ++i) {
+        Vec2d xx = x[i].cast<double>();
+        Vec2d yy = y[i].cast<double>();
+        p.block<2,9>(i*2,0) = createPointMatchingMatrix(xx, yy);
+    }
+    Eigen::JacobiSVD<decltype(p)> svd(p, Eigen::ComputeThinV);
+    Eigen::Matrix<double, 9, 1> hv = svd.matrixV().block<9,1>(0,8);
+    h = Eigen::Map<Mat3d>(hv.data());
+    h /= h(2,2);
+    return h.transpose().cast<float>();
 }

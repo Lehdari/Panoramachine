@@ -25,6 +25,12 @@ void gammaCorrect(cv::Mat& image, float gamma);
 cv::Mat correctImage(const cv::Mat& image, const cv::Mat& correction);
 void show2ChannelImage(const std::string& windowName, const cv::Mat& image);
 cv::Mat load2ChannelImage(const std::string& filename);
+Mat3f computeHomography(const std::vector<Vec2f>& x, const std::vector<Vec2f>& y);
+
+template <typename T_Scalar>
+Eigen::Matrix<T_Scalar, 2, 9> createPointMatchingMatrix(
+    const Eigen::Matrix<T_Scalar,2,1>& x,
+    const Eigen::Matrix<T_Scalar,2,1>& y);
 
 // Map from vector/scalar types to OpenCV pixel formats
 struct PixelFormatMap { template <typename U> static constexpr int format = 0; };
