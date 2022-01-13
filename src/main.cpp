@@ -9,7 +9,7 @@
 //
 
 #include "TrainFeatureDetector.hpp"
-#include "StitchImages.hpp"
+#include "Stitch.hpp"
 #include "Utils.hpp"
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
@@ -27,17 +27,20 @@ int main(void)
         trainFeatureDetector();
     #else
         // TODO replace with proper, argument-based image loading
-        std::vector<std::string> filenames = {"../input/20210909_133246.jpg", "../input/20210909_133243.jpg"};
+        std::vector<std::string> filenames = {
+            "../input/20210909_133249.jpg",
+            "../input/20210909_133246.jpg",
+            "../input/20210909_133243.jpg",
+            "../input/20210909_133239.jpg"
+        };
 
         std::vector<Image<Vec3f>> images;
-
         for (auto& filename : filenames) {
             cv::Mat img;
             cv::imread(filename).convertTo(img, CV_32FC3, 1/255.0);
             images.emplace_back(std::move(img));
         }
-        auto result = stitchImages(images);
-        cv::imwrite("../result.exr", result);
+        Stitch stitch(images);
     #endif
 
     return 0;
