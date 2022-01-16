@@ -66,7 +66,7 @@ private:
     void visualizeConnections(int delay = 0) const;
 
     static std::default_random_engine rnd;
-    static Feature randomSampleFeature(const Image<Vec3f>& image, float scale);
+    static Feature randomSampleFeature(const Image<Vec3f>& image, float scale, int energyIterations=0);
 };
 
 

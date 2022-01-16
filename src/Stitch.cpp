@@ -44,8 +44,8 @@ Stitch::Stitch(const std::vector<Image<Vec3f>>& images) :
         while (img2 == img1)
             img2 = rnd()%_images.size();
         float scale = std::pow(2.0f, 3.0f+RND*3.0f);
-        auto f1 = randomSampleFeature(_images[img1], scale);
-        auto f2 = randomSampleFeature(_images[img2], scale);
+        auto f1 = randomSampleFeature(_images[img1], scale, 10);
+        auto f2 = randomSampleFeature(_images[img2], scale, 10);
         _connections.emplace_back(_detector, f1, f2, img1, img2);
     }
     updateConnections();
@@ -96,8 +96,8 @@ void Stitch::operator()()
                     while (img2 == img1)
                         img2 = rnd()%_images.size();
                     scale = std::pow(2.0f, 1.0f+RND*5.0f);
-                    f1 = randomSampleFeature(_images[img1], scale);
-                    f2 = randomSampleFeature(_images[img2], scale);
+                    f1 = randomSampleFeature(_images[img1], scale, 10);
+                    f2 = randomSampleFeature(_images[img2], scale, 10);
                 }
             }
             else {
@@ -228,7 +228,21 @@ void Stitch::visualizeConnections(int delay) const
     cv::waitKey(delay);
 }
 
-Feature Stitch::randomSampleFeature(const Image<Vec3f>& image, float scale)
+Feature Stitch::randomSampleFeature(const Image<Vec3f>& image, float scale, int energyIterations)
 {
-    return Feature(image, Vec2f(image[0].cols*RND, image[0].rows*RND), scale);
+    Feature feature1(image, Vec2f(image[0].cols*RND, image[0].rows*RND), scale);
+    Feature feature2;
+    Feature* f1 = &feature1;
+    Feature* f2 = &feature2;
+    double e1 = f1->getEnergy();
+    double e2;
+    for (int i=0; i<energyIterations; ++i) {
+        *f2 = Feature(image, Vec2f(image[0].cols*RND, image[0].rows*RND), scale);
+        e2 = f2->getEnergy();
+        if (e2 > e1) {
+            std::swap(f1, f2);
+            e1 = e2;
+        }
+    }
+    return *f1;
 }
