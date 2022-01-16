@@ -31,6 +31,8 @@ struct Feature {
     Feature();
     Feature(const Image<Vec3f>& img, const Vec2f& p, float scale);
 
+    double getEnergy();
+
     void writeToFile(std::ofstream& out) const;
     void readFromFile(std::ifstream& in);
     void writeToFile(const std::string& filename) const;
@@ -39,6 +41,7 @@ struct Feature {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 private:
     void sampleCircle(int firstColId, const Image<Vec3f>& img, const Vec2f& p, int n, float radius);
+    double  energy;
 };
 
 

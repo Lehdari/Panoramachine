@@ -18,20 +18,37 @@
 Feature::Feature() :
     polar   (Polar::Zero()),
     p       (0.0f, 0.0f),
-    scale   (0.0f)
+    scale   (0.0f),
+    energy  (-1.0)
 {
 }
 
 Feature::Feature(const Image<Vec3f>& img, const Vec2f& p, float scale) :
     polar   (Polar::Zero()),
     p       (p),
-    scale   (scale)
+    scale   (scale),
+    energy  (-1.0)
 {
     sampleCircle(0, img, p, 8, 1.0f*scale);
     sampleCircle(8, img, p, 8, 2.0f*scale);
     sampleCircle(16, img, p, 16, 4.0f*scale);
     sampleCircle(32, img, p, 32, 8.0f*scale);
     sampleCircle(64, img, p, 64, 16.0f*scale);
+}
+
+double Feature::getEnergy()
+{
+    static Eigen::Matrix<float, 9, 1> maskVector = []() {
+        Eigen::Matrix<float, 9, 1> maskVector;
+        maskVector << 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f;
+        return maskVector;
+    }();
+    static Polar maskMatrix = Eigen::Replicate<Eigen::Matrix<float, 9, 1>, fsd, fsn>(maskVector);
+
+    if (energy < 0.0)
+        energy = std::sqrt((double)polar.cwiseProduct(maskMatrix).array().square().sum());
+
+    return energy;
 }
 
 void Feature::writeToFile(std::ofstream& out) const
