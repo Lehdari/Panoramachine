@@ -101,16 +101,16 @@ void Stitch::operator()()
                 }
             }
             else {
+                // Update the connection towards smaller diff
                 auto& c = _connections[j];
-                float dir1 = RND * 2.0f * M_PI;
-                float dir2 = RND * 2.0f * M_PI;
-                Vec2f p1 = c.p1 + (c.diff*0.25f + RND*0.1f*Vec2f(cosf(dir1), sinf(dir1)))*c.scale1*Feature::fmr;
-                Vec2f p2 = c.p2 + (-c.diff*0.25f + RND*0.1f*Vec2f(cosf(dir2), sinf(dir2)))*c.scale2*Feature::fmr;
+                double energySum = c.energy1+c.energy2; // less energy -> move more
+                Vec2f p1 = c.p1 + c.diff*(c.energy2/energySum)*c.scale1*Feature::fmr;
+                Vec2f p2 = c.p2 - c.diff*(c.energy1/energySum)*c.scale2*Feature::fmr;
                 p1(0) = std::clamp(p1(0), 0.0f, (float)_images[c.img1][0].cols);
                 p1(1) = std::clamp(p1(1), 0.0f, (float)_images[c.img1][0].rows);
                 p2(0) = std::clamp(p2(0), 0.0f, (float)_images[c.img2][0].cols);
                 p2(1) = std::clamp(p2(1), 0.0f, (float)_images[c.img2][0].rows);
-                scale = c.scale1;//std::clamp(c.scale1 * (0.95f + 0.09f*(float)RND), 4.0f, 64.0f);
+                scale = c.scale1;
                 img1 = c.img1;
                 img2 = c.img2;
                 f1 = Feature(_images[img1], p1, scale);
