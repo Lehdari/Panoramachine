@@ -41,6 +41,7 @@ int main(void)
             images.emplace_back(std::move(img));
         }
         Stitch stitch(images);
+        stitch();
     #endif
 
     return 0;
