@@ -38,15 +38,44 @@ Feature::Feature(const Image<Vec3f>& img, const Vec2f& p, float scale) :
 
 double Feature::getEnergy()
 {
-    static Eigen::Matrix<float, 9, 1> maskVector = []() {
-        Eigen::Matrix<float, 9, 1> maskVector;
-        maskVector << 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f;
-        return maskVector;
+    // Use decreasing weights for samples further from center
+    static Eigen::Matrix<float, 6, fsn> weightMatrix = []() {
+        Eigen::Matrix<float, 6, fsn> w;
+        for (int i=0; i<8; ++i)
+            w.block<6,1>(0,i) << 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f;
+        for (int i=8; i<16; ++i)
+            w.block<6,1>(0,i) << 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f;
+        for (int i=16; i<32; ++i)
+            w.block<6,1>(0,i) << 0.25f, 0.25f, 0.25f, 0.25f, 0.25f, 0.25f, 0.25f, 0.25f;
+        for (int i=32; i<64; ++i)
+            w.block<6,1>(0,i) << 0.125f, 0.125f, 0.125f, 0.125f, 0.125f, 0.125f, 0.125f, 0.125f;
+        for (int i=64; i<128; ++i)
+            w.block<6,1>(0,i) << 0.0625f, 0.0625f, 0.0625f, 0.0625f, 0.0625f, 0.0625f, 0.0625f, 0.0625f;
+        return w;
     }();
-    static Polar maskMatrix = Eigen::Replicate<Eigen::Matrix<float, 9, 1>, fsd, fsn>(maskVector);
 
-    if (energy < 0.0)
-        energy = std::sqrt((double)polar.cwiseProduct(maskMatrix).array().square().sum());
+    // Filtering relative to scale to avoid aliasing
+    float sf = std::max(std::log2(scale), 0.0f);
+    int s = (int)sf;
+
+    if (s+1 >= Feature::fsd)
+        return 0.0;
+
+    if (energy < 0.0) {
+        energy = 0.0;
+        { // first layer to be sampled
+            auto m = polar.block<6, fsn>(3 + 9 * s, 0);
+            Eigen::Matrix<float, 6, fsn> mean = m.rowwise().mean().replicate<1, fsn>();
+            energy += (1.0f-sf+s)*std::sqrt((m - mean).cwiseProduct(weightMatrix).array().square().sum());
+        }
+        for (int i = s+1; i < Feature::fsd; ++i) { // rest of the layers
+            auto m = polar.block<6, fsn>(3 + 9*i, 0);
+            Eigen::Matrix<float, 6, fsn> mean = m.rowwise().mean().replicate<1, fsn>();
+            energy += std::sqrt((m-mean).cwiseProduct(weightMatrix).array().square().sum());
+        }
+    }
+
+    energy = energy/(fsd-sf);
 
     return energy;
 }
