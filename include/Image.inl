@@ -122,7 +122,7 @@ template<typename T>
 cv::Mat Image<T>::downscaleLayer(const cv::Mat& layer)
 {
     constexpr float kernel[] = {
-        1.0f, 4.0f, 6.0f, 4.0f, 1.0f
+        0.04041793708936, 0.181140626898994, 0.298650404556327, 0.181140626898994, 0.04041793708936
     };
     constexpr int kernelSize = sizeof(kernel) / sizeof(decltype(*kernel));
     constexpr int kernelOffset = (kernelSize-1)/2;
