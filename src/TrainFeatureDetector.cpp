@@ -9,6 +9,7 @@
 //
 
 #include "TrainFeatureDetector.hpp"
+#include "FeatureDataset.hpp"
 #include "Utils.hpp"
 #include "FeatureDetector.hpp"
 #include "ImagePostProcessing.hpp"
@@ -201,6 +202,17 @@ TrainingEntry makeMatchingTrainingEntry(
         Vec3f((p2(0)-p1(0))*distanceScale, (p2(1)-p1(1))*distanceScale, f2.scale / f1.scale) };
 }
 
+std::vector<Image<Vec3f>> readImages(const std::string& datasetImagesDirectory)
+{
+    std::vector<Image<Vec3f>> images;
+    for (const auto & entry : std::filesystem::directory_iterator(datasetImagesDirectory)) {
+        printf("Processing %s...\n", entry.path().string().c_str());
+        std::string imagePath = datasetImagesDirectory + std::string("/") + entry.path().string();
+        images.push_back(readImage<Vec3f>(imagePath));
+    }
+    return images;
+}
+
 void generateDataset(TrainingData& trainingData, int datasetSize, const std::string& datasetImagesDirectory)
 {
     DistortSettings minSettings{
@@ -347,18 +359,21 @@ TrainingBatch sampleBatch(const TrainingData& data, int datasetSize, int batchSi
 
 void trainFeatureDetector()
 {
-    constexpr int datasetSize = 32768;
-    constexpr int batchSize = 256;
-    constexpr int nTrainingBatches = 112;
+    constexpr size_t datasetSize = 8192;
+    constexpr size_t batchSize = 256;
+    constexpr int nNewEntries = 32; // number of new entries per epoch
+    constexpr int nTrainingBatches = 16;
     constexpr int nEvaluationBatches = 16;
     constexpr int batchesInEpoch = nTrainingBatches + nEvaluationBatches;
     constexpr int nEpochs = 100000;
 
     std::default_random_engine rnd(1507715517);
 
-    TrainingData trainingData;
+    //TrainingData trainingData;
+    const std::string trainingSourceImagesDirectory = "../training_data";
     const std::string datasetImagesDirectory = "../temp/images";
     const std::string datasetDirectory = "../temp/dataset";
+#if 0
     if (!std::filesystem::exists("../temp/dataset")) {
         // generate dataset in case it does not yet exist
         printf("Generaring new dataset...\n");
@@ -372,7 +387,7 @@ void trainFeatureDetector()
         printf("Loading dataset...\n");
         loadDataset(datasetDirectory, trainingData, datasetSize);
     }
-
+#endif
 #if 0
     for (auto& entry : trainingData) {
         visualizeFeature(entry.f1, "f1", 4);
@@ -385,29 +400,55 @@ void trainFeatureDetector()
         cv::waitKey(0);
     }
 #endif
+#if 1
+    auto images = readImages(trainingSourceImagesDirectory);
+    FeatureDataset dataset(images);
+    if (!std::filesystem::exists("../temp/dataset")) {
+        // generate dataset in case it does not yet exist
+        printf("Generaring new dataset...\n");
+        dataset.construct(datasetSize);
+        dataset.writeToDirectory(datasetDirectory);
+    }
+    else {
+        printf("Loading dataset...\n");
+        dataset.readFromDirectory(datasetDirectory);
+    }
+#endif
 
-    FeatureDetector<OptimizerAdam> detector(0.2);
+    FeatureDetector<OptimizerAdam> detector(0.25);
     detector.loadWeights("../feature_detector_model");
     double minEvaluationLoss = std::numeric_limits<double>::max();
-    int epochStartId = 0;
+
+    FeatureDataset::ConstIterator newEntriesBegin = dataset.begin();
+    FeatureDataset::ConstIterator newEntriesEnd = newEntriesBegin + nNewEntries;
     for (int e=0; e<nEpochs; ++e) {
+        FeatureDataset::ConstIterator batchBegin = dataset.begin();
+        FeatureDataset::ConstIterator batchEnd = batchBegin + batchSize;
+
         auto t1 = std::chrono::high_resolution_clock::now();
         double trainingLoss = 0.0;
         for (int i=0; i<nTrainingBatches; ++i) {
-            auto batch = sampleBatch(trainingData, datasetSize, batchSize);
-            trainingLoss += detector.trainBatch(batch);
+            trainingLoss += detector.trainBatch(batchBegin, batchEnd);
+
+            batchBegin = batchEnd;
+            batchEnd = batchBegin + batchSize;
+            assert(batchEnd <= dataset.end());
         }
         auto t2 = std::chrono::high_resolution_clock::now();
         trainingLoss /= nTrainingBatches;
 
         double evaluationLoss = 0.0;
         for (int i=0; i<nEvaluationBatches; ++i) {
-            auto batch = sampleBatch(trainingData, datasetSize, batchSize);
             for (int j = 0; j < batchSize; ++j) {
+                auto& entry = *(batchBegin+j);
                 Vec3f g = FeatureDetector<OptimizerAdam>::gradient(
-                    detector(batch[j]->f1, batch[j]->f2), batch[j]->label);
+                    detector(*entry.f1, *entry.f2), *entry.label);
                 evaluationLoss += g.array().square().sum();
             }
+
+            batchBegin = batchEnd;
+            batchEnd = batchBegin + batchSize;
+            assert(batchEnd <= dataset.end());
         }
 
         evaluationLoss /= batchSize*nEvaluationBatches;
@@ -424,8 +465,14 @@ void trainFeatureDetector()
             minEvaluationLoss = evaluationLoss;
         }
 
-        std::shuffle(trainingData.begin(), trainingData.begin()+(nTrainingBatches*batchSize), rnd);
-
-        epochStartId += batchesInEpoch*batchSize;
+        // Generate new entries and shuffle the dataset
+        dataset.generateNewEntries(newEntriesBegin, newEntriesEnd, 1.0);
+        newEntriesBegin = newEntriesEnd; // advance the range
+        newEntriesEnd = newEntriesBegin + nNewEntries;
+        if (newEntriesEnd > dataset.end()) {
+            newEntriesBegin = dataset.begin();
+            newEntriesEnd = newEntriesBegin + nNewEntries;
+        }
+        dataset.shuffle(dataset.begin(), dataset.begin()+(batchSize*nTrainingBatches));
     }
 }

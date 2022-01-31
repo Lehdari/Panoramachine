@@ -12,8 +12,8 @@
 #define PANORAMACHINE_FEATUREDETECTOR_HPP
 
 
-#include "TrainFeatureDetector.hpp"
 #include "NeuralNetwork.hpp"
+#include "FeatureDataset.hpp"
 
 
 template <template <typename> class T_Optimizer>
@@ -53,7 +53,7 @@ private:
 public:
     FeatureDetector(double dropoutRate = 0.0);
 
-    double trainBatch(const TrainingBatch& batch);
+    double trainBatch(const FeatureDataset::ConstIterator& begin, const FeatureDataset::ConstIterator& end);
     void saveWeights(const std::string& directory);
     void loadWeights(const std::string& directory);
     void printInfo();

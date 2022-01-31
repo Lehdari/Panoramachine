@@ -31,16 +31,18 @@ FeatureDetector<T_Optimizer>::FeatureDetector(double dropoutRate) :
 }
 
 template <template <typename> class T_Optimizer>
-double FeatureDetector<T_Optimizer>::trainBatch(const TrainingBatch& batch)
+double FeatureDetector<T_Optimizer>::trainBatch(
+    const FeatureDataset::ConstIterator& begin, const FeatureDataset::ConstIterator& end)
 {
     double loss = 0.0;
     #pragma omp parallel for
-    for (auto* entry : batch) {
-        double l = trainingPass(entry->f1, entry->f2, entry->label);
+    for (FeatureDataset::ConstIterator it = begin; it != end; ++it) {
+        auto& entry = *it;
+        double l = trainingPass(*entry.f1, *entry.f2, *entry.label);
         #pragma omp critical
         loss += l;
     }
-    loss /= batch.size();
+    loss /= std::distance(begin, end);
 
     constexpr float learningRate = 0.001f;
     constexpr float momentum = 0.9f;
